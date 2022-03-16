@@ -121,3 +121,93 @@ def new_dataset(path, threshold):
 tab_f = new_dataset(path+"\maestro-v3.0.0.csv", duration[index])
 print(pnd.unique(tab_f['canonical_composer']))
 print(tab_f['duration'].min())
+
+
+def resampling(datas, sr=22050):
+    '''
+    rééchantillonage des morceaux
+
+    Parameters
+    ----------
+    datas : pnd array
+        tableau en sortie de new_dataset
+    sr : int, optional
+        La fréquence d'échantillonage voulue. The default is 22050.
+
+    Returns
+    -------
+    X : numpy ndarray (3D)
+        tableau des données temporelles resamplées
+    Y : numpy array[string]
+        labels
+    length : numpy array[int]
+        longueur des donées en échantillons
+    '''
+    return X, Y, length
+
+def sample_cut(X, Y, length, cut):
+    '''
+    Découpe des morceaux en blocs de mêmes tailles
+
+    Parameters
+    ----------
+    X : numpy ndarray (3D)
+        Les données temporelles des morceaux entiers
+    Y : numpy array[string]
+        labels
+    length : numpy array[int]
+        nombre d'échantillons par morceau
+    cut : int
+        échantillon de coupe
+
+    Returns
+    -------
+    X_blocs : numpy ndarray (3D)
+        données reformatées
+    Y_blocs : numpy array[int]
+        labels reformatés
+
+    '''
+    return X_blocs, Y
+    
+
+def audio_preprocessing(X, nb_mfcc, mfcc_sample_rate):
+    '''
+    Transformation mfc et rééchantillonage
+    
+    Parameters
+    ----------
+    X : numpy ndarray (3D)
+        données temporelles
+    nb_mfcc : int
+        nombre de mfcc
+    mfcc_sample_rate : int
+        pas de rééchantillonage après transformation mfc
+
+    Returns
+    -------
+    mfcc : numpy ndarray (3D)
+        mfcc rééchantillonnés
+
+    '''
+    return mfcc
+
+def write_json(X, Y, json_name):
+    '''
+    Effectue le mapping de labels et écrit les données dans un json
+
+    Parameters
+    ----------
+    X : numpy ndarray (3D)
+        mfcc resamplées
+    Y : numpy array[string]
+        labels
+    json_name : string
+        nom du fichier json
+
+    Returns
+    -------
+    None.
+
+    '''
+    
