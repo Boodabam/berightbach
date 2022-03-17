@@ -18,49 +18,55 @@ path = os.path.dirname(os.path.realpath(__file__))
 currentFile = open(path+"\maestro-v3.0.0.csv", encoding="utf8")
 maestro = pnd.read_csv(currentFile)
 
-composer_b = pnd.unique(maestro['canonical_composer'])
-#print(composer_b)
-#print(len(composer_b))
+def composer(maestro):
+    '''
+    Renvoie un tableau avec tous les compositeurs du fichier csv
+    '''
+    composer_b = pnd.unique(maestro['canonical_composer'])
+    return composer_b
 
-composer = [x for x in composer_b if '/' not in x]
-composer_d = [x for x in composer_b if '/' in x]
-#print(composer)
-#print(len(composer))
-#print(composer_d)
-#print(len(composer_d))
 
-duration=[]
-for c in composer:
-    count =0
-    for index, current in maestro.iterrows():
-        if current['canonical_composer']==c:
-            count = count + current['duration']
-    duration.append(count)
+def tri_composer(composer_b):
+    '''
+    Renvoie un tableau contenant les compositeurs simples
+    Renvoie un tableau contenant les compositeurs doubles
+    '''
+    composer = [x for x in composer_b if '/' not in x]
+    composer_d = [x for x in composer_b if '/' in x]
+    return composer, composer_d
+
+
+def duree(composer):
+    '''
+    Renvoie un tableau contenant la durée totale des morceaux pour chaque compositeur
+    donné en paramètre
+    '''
+    duration=[]
+    for c in composer:
+        count =0
+        for index, current in maestro.iterrows():
+            if current['canonical_composer']==c:
+                count = count + current['duration']
+        duration.append(count)
+    return duration
     
-#print(duration)
 
-plt.figure()
-plt.bar(composer, duration)
-plt.title("durée totale des morceaux")
-plt.xticks(rotation=90)
-plt.xlabel("compositeur")
-plt.ylabel("durée")
-plt.show()
+def affichage(composer, duration):
+    '''
+    Affiche un graphe avec la durée totale des morceaux de chaque compositeur
+    '''
+    plt.figure()
+    plt.bar(composer, duration)
+    plt.title("durée totale des morceaux")
+    plt.xticks(rotation=90)
+    plt.xlabel("compositeur")
+    plt.ylabel("durée")
+    plt.show()
 
-index = composer.index('Modest Mussorgsky')
-#print(index)
-#print(composer[index], duration[index])
-
-composer_f=[]
-for i in range (len(composer)):
-    if duration[i]>duration[index]:
-        composer_f.append(composer[i])
-
-#print(composer_f)
 
 def list_compo(path, threshold):
     '''
-    
+    Liste des compositeurs remplissant les critères de sélection
 
     Parameters
     ----------
@@ -72,7 +78,7 @@ def list_compo(path, threshold):
     Returns
     -------
     composer : array
-        Liste des compositeurs qui remplissent les critères
+        Liste des compositeurs
 
     '''
     currentFile = open(path, encoding="utf8")
@@ -91,7 +97,7 @@ def list_compo(path, threshold):
 
 def new_dataset(path, threshold):
     '''
-    
+    Création du tableau pandas avec les morceaux des compositeurs correspondant aux critères de sélection
 
     Parameters
     ----------
@@ -103,8 +109,7 @@ def new_dataset(path, threshold):
     Returns
     -------
     new_tab : pnd array
-        Tableau pandas contenant uniquement les compositeurs correspondants aux critères
-        associés aux morceaux et leur durée
+        Tableau pandas contenant les morceaux, leur compositeur et leur durée
 
     '''
     currentFile = open(path, encoding="utf8")
@@ -118,14 +123,14 @@ def new_dataset(path, threshold):
     new_tab = pnd.DataFrame(data = tab, columns=('audio_filename','canonical_composer','duration'))
     return new_tab
 
-tab_f = new_dataset(path+"\maestro-v3.0.0.csv", duration[index])
+tab_f = new_dataset(path+"\maestro-v3.0.0.csv", 12000)
 print(pnd.unique(tab_f['canonical_composer']))
 print(tab_f['duration'].min())
 
 
-def resampling(datas, sr=22050):
+def resampling(datas, sr=22050, cut=30.0):
     '''
-    rééchantillonage des morceaux
+    rééchantillonage des morceaux et découpe en blocs de mêmes tailles
 
     Parameters
     ----------
@@ -133,42 +138,27 @@ def resampling(datas, sr=22050):
         tableau en sortie de new_dataset
     sr : int, optional
         La fréquence d'échantillonage voulue. The default is 22050.
+    cut : float
+        Temps de coupe en seconde. The default is 30.0
 
     Returns
     -------
-    X : numpy ndarray (3D)
-        tableau des données temporelles resamplées
+    X : numpy ndarray (2D)
+        tableau des données temporelles resamplées et reformatées
     Y : numpy array[string]
         labels
-    length : numpy array[int]
-        longueur des donées en échantillons
     '''
-    return X, Y, length
-
-def sample_cut(X, Y, length, cut):
-    '''
-    Découpe des morceaux en blocs de mêmes tailles
-
-    Parameters
-    ----------
-    X : numpy ndarray (3D)
-        Les données temporelles des morceaux entiers
-    Y : numpy array[string]
-        labels
-    length : numpy array[int]
-        nombre d'échantillons par morceau
-    cut : int
-        échantillon de coupe
-
-    Returns
-    -------
-    X_blocs : numpy ndarray (3D)
-        données reformatées
-    Y_blocs : numpy array[int]
-        labels reformatés
-
-    '''
-    return X_blocs, Y
+    X = np.array()
+    Y = np.array()
+    for index, current in datas.iterrows():
+        count = current['duration']
+        i=0.0
+        while i+cut < count :
+            t, s = lb.load(current['audio_filename'],sr = sr, offset=i,duration=cut)
+            X.append(t)
+            Y.append(current['canonical_composer'])
+            i = i+cut
+    return X, Y
     
 
 def audio_preprocessing(X, nb_mfcc, mfcc_sample_rate):
