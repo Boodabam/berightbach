@@ -12,7 +12,7 @@ import math as mt
 from collections import Counter
 
 import os
-
+sr = 22050
 path = os.path.dirname(os.path.realpath(__file__))
 
 currentFile = open(path+"\maestro-v3.0.0.csv", encoding="utf8")
@@ -128,7 +128,7 @@ print(pnd.unique(tab_f['canonical_composer']))
 print(tab_f['duration'].min())
 
 
-def resampling(datas, sr=22050, cut=30.0):
+def resampling(datas, cut=30.0):
     '''
     rééchantillonage des morceaux et découpe en blocs de mêmes tailles
 
@@ -161,7 +161,7 @@ def resampling(datas, sr=22050, cut=30.0):
     return X, Y
     
 
-def audio_preprocessing(X, nb_mfcc, mfcc_sample_rate):
+def audio_preprocessing(X, nb_mfcc, mfcc_sr):
     '''
     Transformation mfc et rééchantillonage
     
@@ -180,6 +180,10 @@ def audio_preprocessing(X, nb_mfcc, mfcc_sample_rate):
         mfcc rééchantillonnés
 
     '''
+    mfcc = np.ndarray((X.len, X[1].len, nb_mfcc))
+    for x in X:
+        pre_resample = np.transpose(lb.feature.mfcc(y=x,n_mfcc=nb_mfcc))
+        mfcc[x] = np.transpose(pre_resample[::200])
     return mfcc
 
 def write_json(X, Y, json_name):
