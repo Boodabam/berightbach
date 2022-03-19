@@ -6,6 +6,7 @@ import os, json
 
 import pandas as pnd
 from sklearn.utils import shuffle
+from sklearn.preprocessing import scale
 import seaborn as sn
 import math as mt
 
@@ -161,7 +162,7 @@ def resampling(datas, cut=30.0):
     return X, Y
     
 
-def audio_preprocessing(X, nb_mfcc, mfcc_sr):
+def audio_preprocessing(X, nb_mfcc, mfcc_resample=1):
     '''
     Transformation mfc et rééchantillonage
     
@@ -180,10 +181,13 @@ def audio_preprocessing(X, nb_mfcc, mfcc_sr):
         mfcc rééchantillonnés
 
     '''
-    mfcc = np.ndarray((X.len, X[1].len, nb_mfcc))
+    mfcc = np.ndarray(X.len)
     for x in X:
-        pre_resample = np.transpose(lb.feature.mfcc(y=x,n_mfcc=nb_mfcc))
-        mfcc[x] = np.transpose(pre_resample[::200])
+        cepstrum = lb.feature.mfcc(y=x,n_mfcc=nb_mfcc)[:1]
+        if mfcc_resample != 1:
+            cepstrum = np.transpose(cepstrum)
+            cepstrum = np.transpose(cepstrum[::mfcc_resample])
+        mfcc[x] = scale(cepstrum, axis=1)
     return mfcc
 
 def write_json(X, Y, json_name):
