@@ -45,6 +45,10 @@ if __name__ == "__main__":
     if used_package == "tensorflow":
         #avec tensorflow
         network = kr.Sequential([
+            #convolution
+            kr.layers.Conv2D(2,(3,3)),
+            #pooling
+            kr.layers.MaxPooling2D(pool_size=(2,2)),
             #entrée
             kr.layers.Flatten(input_shape=(X.shape[1], X.shape[2])),
             #couches intermédiaires
