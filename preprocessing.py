@@ -208,4 +208,16 @@ def write_json(X, Y, json_name):
     None.
 
     '''
+    compo = list(set(Y))
+    print(compo)
     
+    morceau = np.empty(Y.shape)
+    for i in range(len(Y)):
+        morceau[i]=compo.index(Y[i])
+    
+    dictio = {}
+    dictio["mapping"]=compo
+    dictio["labels"]=morceau
+    
+    with open(path+json_name, "w") as js:
+        json.dump(dictio, js, indent=2)
