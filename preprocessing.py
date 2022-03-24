@@ -16,7 +16,7 @@ import os
 sr = 22050
 path = os.path.dirname(os.path.realpath(__file__))
 
-currentFile = open(path+"\maestro-v3.0.0.csv", encoding="utf8")
+currentFile = open(path + "\\maestro-v3.0.0\\maestro-v3.0.0.csv", encoding="utf8")
 maestro = pnd.read_csv(currentFile)
 
 def composer(maestro):
@@ -124,7 +124,7 @@ def new_dataset(path, threshold):
     new_tab = pnd.DataFrame(data = tab, columns=('audio_filename','canonical_composer','duration'))
     return new_tab
 
-tab_f = new_dataset(path+"\maestro-v3.0.0.csv", 12000)
+tab_f = new_dataset(path+"\\maestro-v3.0.0\\maestro-v3.0.0.csv", 12000)
 print(pnd.unique(tab_f['canonical_composer']))
 print(tab_f['duration'].min())
 
