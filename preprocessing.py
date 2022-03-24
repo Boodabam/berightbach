@@ -15,9 +15,9 @@ from collections import Counter
 import os
 sr = 22050
 path = os.path.dirname(os.path.realpath(__file__))
-
-currentFile = open(path + "\\maestro-v3.0.0\\maestro-v3.0.0.csv", encoding="utf8")
-maestro = pnd.read_csv(currentFile)
+path_csv = path + "\\maestro-v3.0.0\\maestro-v3.0.0.csv"
+datas_csv = open(path + "\\maestro-v3.0.0\\maestro-v3.0.0.csv", encoding="utf8")
+maestro = pnd.read_csv(datas_csv)
 
 def composer(maestro):
     '''
@@ -124,12 +124,12 @@ def new_dataset(path, threshold):
     new_tab = pnd.DataFrame(data = tab, columns=('audio_filename','canonical_composer','duration'))
     return new_tab
 
-tab_f = new_dataset(path+"\\maestro-v3.0.0\\maestro-v3.0.0.csv", 12000)
-print(pnd.unique(tab_f['canonical_composer']))
-print(tab_f['duration'].min())
+#tab_f = new_dataset(path+"\\maestro-v3.0.0\\maestro-v3.0.0.csv", 12000)
+#print(pnd.unique(tab_f['canonical_composer']))
+#print(tab_f['duration'].min())
 
 
-def resampling(datas, cut=30.0):
+def resampling(audio_filename,composer,curent_duree, cut=30.0):
     '''
     rééchantillonage des morceaux et découpe en blocs de mêmes tailles
 
@@ -151,14 +151,13 @@ def resampling(datas, cut=30.0):
     '''
     X = np.array()
     Y = np.array()
-    for index, current in datas.iterrows():
-        count = current['duration']
-        i=0.0
-        while i+cut < count :
-            t, s = lb.load(current['audio_filename'],sr = sr, offset=i,duration=cut)
-            X.append(t)
-            Y.append(current['canonical_composer'])
-            i = i+cut
+    count = curent_duree
+    i=0.0
+    while i+cut < count :
+        t, s = lb.load(audio_filename,sr = sr, offset=i,duration=cut)
+        X.append(t)
+        Y.append(composer)
+        i = i+cut
     return X, Y
     
 
@@ -221,3 +220,6 @@ def write_json(X, Y, json_name):
     
     with open(path+json_name, "w") as js:
         json.dump(dictio, js, indent=2)
+
+def pipeline():
+    datas = new_dataset(path_csv, threshold)
