@@ -6,7 +6,7 @@ import tensorflow.keras as kr
 import librosa as lb
 import os, json
 
-path = os.getcwd()+"//preprocessed_data.json"
+path = os.getcwd() + "\\preprocessed_data.json"
 test_size = 0.3
 topo_network = (128, 128, 128)
 used_package = "tensorflow"
@@ -53,8 +53,8 @@ if __name__ == "__main__":
             kr.layers.Flatten(input_shape=(X.shape[1], X.shape[2])),
             #couches intermédiaires
             kr.layers.Dense(topo_network[0], activation='relu'),
-            kr.layers.Dense(topo_network[1],activation='relu'),
-            kr.layers.Dense(topo_network[2],activation='relu'),
+            kr.layers.Dense(topo_network[1], activation='relu'),
+            kr.layers.Dense(topo_network[2], activation='relu'),
             #Sortie
             kr.layers.Dense(nb_classes, activation='softmax')
         ])
