@@ -10,18 +10,28 @@ from sklearn.preprocessing import scale
 import seaborn as sn
 import math as mt
 
-from collections import Counter
+''' Déclaration des ovariables globales '''
 
-import os
 sr = 22050
 path = os.path.dirname(os.path.realpath(__file__))
 path_csv = path + "\\maestro-v3.0.0\\maestro-v3.0.0.csv"
-datas_csv = open(path + "\\maestro-v3.0.0\\maestro-v3.0.0.csv", encoding="utf8")
+datas_csv = open(path_csv, encoding="utf8")
 maestro = pnd.read_csv(datas_csv)
+
 
 def composer(maestro):
     '''
     Renvoie un tableau avec tous les compositeurs du fichier csv
+    
+    Parameters
+    ----------
+    maestro : tableau pandas
+        tableau contenant les données du fichier csv
+    
+    Returns
+    -------
+    composer_b : numpy array[string]
+        tableau contenant tous les compositeurs du dataset
     '''
     composer_b = pnd.unique(maestro['canonical_composer'])
     return composer_b
@@ -29,8 +39,20 @@ def composer(maestro):
 
 def tri_composer(composer_b):
     '''
-    Renvoie un tableau contenant les compositeurs simples
-    Renvoie un tableau contenant les compositeurs doubles
+    Tri les compositeurs entre les morceaux ayant un unique compositeur et les morceaux contenant deux compositeurs
+    
+    Parameters
+    ----------
+    composer_b : numpy array[string]
+        Liste des compositeurs à trier
+    
+    Returns
+    -------
+    composer : numpy array[string]
+        tableau contenant les compositeurs simples
+    composer_d :numpy array[string]
+        tableau contenant les compositeurs doubles
+        
     '''
     composer = [x for x in composer_b if '/' not in x]
     composer_d = [x for x in composer_b if '/' in x]
@@ -41,6 +63,17 @@ def duree(composer):
     '''
     Renvoie un tableau contenant la durée totale des morceaux pour chaque compositeur
     donné en paramètre
+    
+    Parameters
+    ----------
+    composer : numpy array[string]
+        Tableau contenant le nom des compositeurs
+    
+    Returns
+    -------
+    duration : numpy array
+        Tableau contenant la durée totale pour chaque compositeur
+    
     '''
     duration=[]
     for c in composer:
@@ -55,6 +88,18 @@ def duree(composer):
 def affichage(composer, duration):
     '''
     Affiche un graphe avec la durée totale des morceaux de chaque compositeur
+    
+    Parameters
+    ----------
+    composer : numpy array[string]
+        Tableau des noms de compositeurs
+    duration : numpy array
+        Tableau avec la durée totale des morceaux pour chaque compositeur
+
+    Returns
+    -------
+    None.
+        
     '''
     plt.figure()
     plt.bar(composer, duration)
@@ -64,6 +109,37 @@ def affichage(composer, duration):
     plt.ylabel("durée")
     plt.show()
 
+
+def threshold(composer, duration, nb):
+    '''
+    Renvoie le palier pour avoir le nombre de compositeurs nécessaires
+
+    Parameters
+    ----------
+    composer : numpy array[string]
+        Tableau contenant les compositeurs simple
+    duration : numpy array
+        Tableau contenant la durée totale des morceaux par compositeur
+    nb : int
+        Nombre de compositeurs souhaités dans le dataset 
+
+    Returns
+    -------
+    threshold : float
+        Seuil pour avoir le nombre de compositeurs souhaités
+
+    '''
+    if nb>t :
+        raise "error"
+    t = len(composer)
+    dico = {}
+    for i in range(t:
+        dico[composer[i]]=duration[i]
+    sortedDict = sorted(dico.items(), key=lambda x: x[1])
+    print(sortedDict)
+    m = t-nb
+    threshold = sortedDict[m-1,1]
+    return threshold
 
 def list_compo(path, threshold):
     '''
@@ -91,7 +167,7 @@ def list_compo(path, threshold):
         for index, current in File.iterrows():
             if current['canonical_composer']==c:
                 count = count + current['duration']
-        if count > threshold:
+        if count >= threshold:
             composer_f.append(c)
     return composer_f
 
@@ -131,14 +207,16 @@ def new_dataset(path, threshold):
 
 def resampling(audio_filename,composer,curent_duree, cut=30.0):
     '''
-    rééchantillonage des morceaux et découpe en blocs de mêmes tailles
+    rééchantillonage d'un morceau et découpe en blocs de même taille
 
     Parameters
     ----------
-    datas : pnd array
-        tableau en sortie de new_dataset
-    sr : int, optional
-        La fréquence d'échantillonage voulue. The default is 22050.
+    audio_filename : string
+        chemin du fichier audio à ouvrir
+    composer : string
+        compositeur associé au morceau
+    curent_duree : float
+        durée en seconde du morceau
     cut : float
         Temps de coupe en seconde. The default is 30.0
 
@@ -147,7 +225,7 @@ def resampling(audio_filename,composer,curent_duree, cut=30.0):
     X : numpy ndarray (2D)
         tableau des données temporelles resamplées et reformatées
     Y : numpy array[string]
-        labels
+        label associé
     '''
     X = np.array()
     Y = np.array()
@@ -155,6 +233,7 @@ def resampling(audio_filename,composer,curent_duree, cut=30.0):
     i=0.0
     while i+cut < count :
         t, s = lb.load(audio_filename,sr = sr, offset=i,duration=cut)
+        # Regarder composition de t, tableau 1D suffisant normalement
         X.append(t)
         Y.append(composer)
         i = i+cut
@@ -167,7 +246,7 @@ def audio_preprocessing(X, nb_mfcc, mfcc_resample=1):
     
     Parameters
     ----------
-    X : numpy ndarray (3D)
+    X : numpy ndarray (2D)
         données temporelles
     nb_mfcc : int
         nombre de mfcc
@@ -188,6 +267,7 @@ def audio_preprocessing(X, nb_mfcc, mfcc_resample=1):
             cepstrum = np.transpose(cepstrum[::mfcc_resample])
         mfcc[x] = scale(cepstrum, axis=1)
     return mfcc
+
 
 def write_json(X, Y, json_name):
     '''
@@ -221,5 +301,26 @@ def write_json(X, Y, json_name):
     with open(path+json_name, "w") as js:
         json.dump(dictio, js, indent=2)
 
+
 def pipeline():
+    # récupère les compositeurs
+    compo = composer(maestro)
+    # récupère les compositeurs simples
+    composer, double = tri_composer(compo)
+    # récupère les durées associées
+    duration = duree(composer)
+    # Définir nb
+    # retourne le seuil 
+    threshold(composer, duration, nb)
     datas = new_dataset(path_csv, threshold)
+    X=[]
+    Y=[]
+    for index, current in datas.iterrows():
+        # Resampling
+        x1, y1 = resampling(current['audio_filename'],current['canonical_composer'],current['duration'], cut=30.0)
+        # Mfcc, nb de mfcc ? 
+        x1 = audio_preprocessing(x1, '''nb_mfcc''', mfcc_resample=1)
+        X = np.concatenate([X,x1])
+        Y = np.concatenate([Y,y1])
+    # Définir le nom du nouveau fichier json 
+    write_json(X,Y,'''jsonname''')
