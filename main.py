@@ -8,7 +8,7 @@ import os, json
 
 path = os.getcwd() + "\\preprocessed_data.json"
 test_size = 0.3
-topo_network = (128, 128, 128)
+topo_network = (64, 64, 64)
 used_package = "tensorflow"
 learning_rate = 0.001
 batch_size = 32
@@ -48,17 +48,26 @@ if __name__ == "__main__":
     if used_package == "tensorflow":
         # avec tensorflow
         network = kr.Sequential([
-            kr.layers.Input(shape=(X.shape[1], X.shape[2])),
-            # convolution
-            kr.layers.Conv2D(20, (3, 3)),
-            # pooling
-            kr.layers.MaxPooling2D(pool_size=(2, 2)),
             # entrée
-            kr.layers.Flatten(input_shape=(X.shape[1] - 2, X.shape[2] - 2)),
+            kr.layers.Input(shape=(X.shape[1], X.shape[2],1)),
+            # convolution
+            kr.layers.Conv2D(16, (3, 3)),
+            # pooling
+            kr.layers.MaxPooling2D(pool_size=(2, 3)),
+            # convolution
+            kr.layers.Conv2D(16, (3, 3)),
+            # pooling
+            kr.layers.MaxPooling2D(pool_size=(2, 3)),
+            # convolution
+            kr.layers.Conv2D(16, (3, 3)),
+            # pooling
+            kr.layers.MaxPooling2D(pool_size=(1, 2)),
+            #applatir
+            kr.layers.Flatten(),
             # couches intermédiaires
             kr.layers.Dense(topo_network[0], activation='relu'),
             kr.layers.Dense(topo_network[1], activation='relu'),
-            kr.layers.Dense(topo_network[2], activation='relu'),
+            #kr.layers.Dense(topo_network[2], activation='relu'),
 
             # Sortie
             kr.layers.Dense(nb_classes, activation='softmax')
