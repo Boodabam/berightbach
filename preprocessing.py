@@ -10,7 +10,8 @@ from sklearn.preprocessing import scale
 import seaborn as sn
 import math as mt
 
-''' Déclaration des ovariables globales '''
+
+''' Déclaration des variables globales '''
 
 sr = 22050
 path = os.path.dirname(os.path.realpath(__file__))
@@ -129,17 +130,19 @@ def threshold(composer, duration, nb):
         Seuil pour avoir le nombre de compositeurs souhaités
 
     '''
-    if nb>t :
-        raise "error"
     t = len(composer)
-    dico = {}
-    for i in range(t:
-        dico[composer[i]]=duration[i]
-    sortedDict = sorted(dico.items(), key=lambda x: x[1])
-    print(sortedDict)
-    m = t-nb
-    threshold = sortedDict[m-1,1]
-    return threshold
+    if nb>t :
+        print("Erreur dans le choix de la taille, trop de compositeurs demandés")
+    else :
+        dico = {}
+        for i in range(t):
+            dico[composer[i]]=duration[i]
+        sortedDict = sorted(dico.items(), key=lambda x: x[1])
+        print(sortedDict)
+        m = t-nb
+        threshold = sortedDict[m-1,1]
+        return threshold
+
 
 def list_compo(path, threshold):
     '''
@@ -205,7 +208,7 @@ def new_dataset(path, threshold):
 #print(tab_f['duration'].min())
 
 
-def resampling(audio_filename,composer,curent_duree, cut=30.0):
+def resampling(audio_filename,curent_duree, cut=30.0):
     '''
     rééchantillonage d'un morceau et découpe en blocs de même taille
 
@@ -213,8 +216,6 @@ def resampling(audio_filename,composer,curent_duree, cut=30.0):
     ----------
     audio_filename : string
         chemin du fichier audio à ouvrir
-    composer : string
-        compositeur associé au morceau
     curent_duree : float
         durée en seconde du morceau
     cut : float
@@ -224,29 +225,27 @@ def resampling(audio_filename,composer,curent_duree, cut=30.0):
     -------
     X : numpy ndarray (2D)
         tableau des données temporelles resamplées et reformatées
-    Y : numpy array[string]
-        label associé
     '''
     X = np.array()
-    Y = np.array()
     count = curent_duree
     i=0.0
     while i+cut < count :
         t, s = lb.load(audio_filename,sr = sr, offset=i,duration=cut)
         # Regarder composition de t, tableau 1D suffisant normalement
-        X.append(t)
-        Y.append(composer)
+        print(t[0])
+        X.append(t[0])
         i = i+cut
-    return X, Y
+    return X
     
 
+# Réécrire la fonction pour return un tableau 2D
 def audio_preprocessing(X, nb_mfcc, mfcc_resample=1):
     '''
     Transformation mfc et rééchantillonage
     
     Parameters
     ----------
-    X : numpy ndarray (2D)
+    X : numpy ndarray (1D)
         données temporelles
     nb_mfcc : int
         nombre de mfcc
@@ -269,16 +268,16 @@ def audio_preprocessing(X, nb_mfcc, mfcc_resample=1):
     return mfcc
 
 
-def write_json(X, Y, json_name):
+def write_json(X, composer, json_name):
     '''
     Effectue le mapping de labels et écrit les données dans un json
 
     Parameters
     ----------
-    X : numpy ndarray (3D)
+    X : numpy array(3D)
         mfcc resamplées
-    Y : numpy array[string]
-        labels
+    composer : string
+        label
     json_name : string
         nom du fichier json
 
@@ -287,19 +286,18 @@ def write_json(X, Y, json_name):
     None.
 
     '''
-    compo = list(set(Y))
-    print(compo)
-    
-    morceau = np.empty(Y.shape)
-    for i in range(len(Y)):
-        morceau[i]=compo.index(Y[i])
-    
-    dictio = {}
-    dictio["mapping"]=compo
-    dictio["labels"]=morceau
-    
-    with open(path+json_name, "w") as js:
-        json.dump(dictio, js, indent=2)
+    # Récupère les données présentes dans le fichier json
+    with open(path+json_name) as js:
+        data_dict = json.load(js)
+
+    # Définition du nouveau tableau de labels
+    dk = list(data_dict.keys())
+    morceau = np.empty(len(X[0]))
+    for i in range(len(X[0])):
+        morceau[i]=dk.index(composer)
+    # Trouver comment écrire à l'intérieur du fichier json
+    #with open(path+json_name, "w") as js:
+    #    json.dump(dictio, js, indent=2)
 
 
 def pipeline():
@@ -313,14 +311,23 @@ def pipeline():
     # retourne le seuil 
     threshold(composer, duration, nb)
     datas = new_dataset(path_csv, threshold)
-    X=[]
-    Y=[]
+    
+    # Initialisation du dictionnaire dans le json
+    dicto = {}
+    dictio["mapping"] = composer
+    dictio["labels"] = []
+    dictio["mfcc"] = []
+    
+    # Définir json_name
+    # Création du fichier jason
+    # Ecriture du dictionnaire
+    with open(path+json_name, "w") as js:
+        json.dump(dictio, js, indent=2)
+    
     for index, current in datas.iterrows():
         # Resampling
-        x1, y1 = resampling(current['audio_filename'],current['canonical_composer'],current['duration'], cut=30.0)
+        x1 = resampling(current['audio_filename'], current['duration'], cut=30.0)
         # Mfcc, nb de mfcc ? 
         x1 = audio_preprocessing(x1, '''nb_mfcc''', mfcc_resample=1)
-        X = np.concatenate([X,x1])
-        Y = np.concatenate([Y,y1])
-    # Définir le nom du nouveau fichier json 
-    write_json(X,Y,'''jsonname''')
+        # Ecriture dans le fichier json
+        write_json(x1,current['canonical_composer'],json_name)
