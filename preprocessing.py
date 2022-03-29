@@ -232,13 +232,12 @@ def resampling(audio_filename,curent_duree, cut=30.0):
     while i+cut < count :
         t, s = lb.load(audio_filename,sr = sr, offset=i,duration=cut)
         # Regarder composition de t, tableau 1D suffisant normalement
-        print(t[0])
-        X.append(t[0])
+        print(t)
+        X.append(t)
         i = i+cut
     return X
     
 
-# Réécrire la fonction pour return un tableau 2D
 def audio_preprocessing(X, nb_mfcc, mfcc_resample=1):
     '''
     Transformation mfc et rééchantillonage
@@ -254,7 +253,7 @@ def audio_preprocessing(X, nb_mfcc, mfcc_resample=1):
 
     Returns
     -------
-    mfcc : numpy ndarray (3D)
+    mfcc : numpy ndarray (2D)
         mfcc rééchantillonnés
 
     '''
@@ -272,7 +271,7 @@ def write_json(X, composer, json_name):
 
     Parameters
     ----------
-    X : numpy array(3D)
+    X : numpy array(2D)
         mfcc resamplées
     composer : string
         label
@@ -298,34 +297,42 @@ def write_json(X, composer, json_name):
     #    json.dump(dictio, js, indent=2)
 
 
-def pipeline():
+def pipeline(nb):
     # récupère les compositeurs
     compo = composer(maestro)
     # récupère les compositeurs simples
-    composer, double = tri_composer(compo)
+    compos, double = tri_composer(compo)
     # récupère les durées associées
     duration = duree(composer)
     # Définir nb
     # retourne le seuil 
-    threshold(composer, duration, nb)
+    threshold(compos, duration, nb)
     datas = new_dataset(path_csv, threshold)
     
-    # Initialisation du dictionnaire dans le json
-    dicto = {}
-    dictio["mapping"] = composer
+    # Initialisation du dictionnaire à écrire dans le fichier json
+    dictio = {}
+    dictio["mapping"] = compos
     dictio["labels"] = []
+    # A définir autrement
     dictio["mfcc"] = []
     
     # Définir json_name
-    # Création du fichier jason
-    # Ecriture du dictionnaire
-    with open(path+json_name, "w") as js:
-        json.dump(dictio, js, indent=2)
     
     for index, current in datas.iterrows():
         # Resampling
-        x1 = resampling(current['audio_filename'], current['duration'], cut=30.0)
-        # Mfcc, nb de mfcc ? 
-        x1 = audio_preprocessing(x1, '''nb_mfcc''', mfcc_resample=1)
-        # Ecriture dans le fichier json
-        write_json(x1,current['canonical_composer'],json_name)
+        x1 = resampling(path+'\\'+current['audio_filename'], current['duration'], cut=10.0)
+        # Définition du nouveau tableau de labels, associe pour chaque bout découper son compositeur
+        # Vérifier que np.size(x1, axis=0) fait correctement le job
+        morceau = np.ones(np.size(x1,axis=0))*compos.index(current['canonical_composer'])
+        print(morceau)
+        # on ajoute les nouveaux indices au dictionnaire
+        dictio["labels"] = np.concatenate(dictio["labels"],morceau)
+        for i in range(np.size(x1,axis=0)):
+            # Mfcc, nb de mfcc ? 
+            x2 = audio_preprocessing(x1[i], '''nb_mfcc''', mfcc_resample=1)
+            # revoir comment append les tableaux
+            dictio["mfcc"] = np.append(dictio["mfcc"],x2)
+ 
+    # Ecriture du dictionnaire dans le fichier json
+    with open(path+json_name, "w") as js:
+        json.dump(dictio, js, indent=2)
