@@ -297,14 +297,28 @@ def write_json(X, composer, json_name):
     #    json.dump(dictio, js, indent=2)
 
 
-def pipeline(nb):
+def pipeline(nb,json_name):
+    '''
+
+    Parameters
+    ----------
+    nb : INT
+        Nombre de compositeurs désirés
+    json_name : string
+        nom du fichier json à écrire
+
+    Returns
+    -------
+    None.
+
+    '''
+    
     # récupère les compositeurs
     compo = composer(maestro)
     # récupère les compositeurs simples
     compos, double = tri_composer(compo)
     # récupère les durées associées
     duration = duree(composer)
-    # Définir nb
     # retourne le seuil 
     threshold(compos, duration, nb)
     datas = new_dataset(path_csv, threshold)
@@ -313,7 +327,6 @@ def pipeline(nb):
     dictio = {}
     dictio["mapping"] = compos
     dictio["labels"] = []
-    # A définir autrement
     dictio["mfcc"] = []
     
     # Définir json_name
@@ -322,16 +335,18 @@ def pipeline(nb):
         # Resampling
         x1 = resampling(path+'\\'+current['audio_filename'], current['duration'], cut=10.0)
         # Définition du nouveau tableau de labels, associe pour chaque bout découper son compositeur
-        # Vérifier que np.size(x1, axis=0) fait correctement le job
         morceau = np.ones(np.size(x1,axis=0))*compos.index(current['canonical_composer'])
         print(morceau)
         # on ajoute les nouveaux indices au dictionnaire
-        dictio["labels"] = np.concatenate(dictio["labels"],morceau)
+        dictio["labels"] = np.append(dictio["labels"],morceau)
         for i in range(np.size(x1,axis=0)):
-            # Mfcc, nb de mfcc ? 
+            # Préprocessing de chaque nouvelle coupe par morceau
             x2 = audio_preprocessing(x1[i], '''nb_mfcc''', mfcc_resample=1)
-            # revoir comment append les tableaux
-            dictio["mfcc"] = np.append(dictio["mfcc"],x2)
+            # Remplissage du dictionnaire
+            if (len(dictio["mfcc"])==0):
+                dictio["mfcc"] = [x2]
+            else :
+                dictio["mfcc"] = np.append(dictio["mfcc"],[x2], axis=0)
  
     # Ecriture du dictionnaire dans le fichier json
     with open(path+json_name, "w") as js:
