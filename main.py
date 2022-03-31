@@ -31,7 +31,24 @@ def load_data(path=path):
     nb_classes = data["nb_classes"]
     return X, Y, nb_classes
 
-
+def plot_acuracy(network):
+    fig = plt.figure(figsize=(12,12))
+    ax = fig.add_subplot(2,1,1)
+    ax.plot(hist.history['Accuracy'])
+    #ax.plot(hist.history['val_accuracy'])
+    ax.title('model accuracy')
+    ax.ylabel('accuracy')
+    ax.xlabel('epoch')
+    ax.legend(['train', 'test'], loc='upper left')
+    ax = fig.add_subplot(2,1,2)
+    ax.plot(hist.history['loss'])
+    #ax.plot(hist.history['val_loss'])
+    ax.title('model loss')
+    ax.ylabel('loss')
+    ax.xlabel('epoch')
+    ax.legend(['train', 'test'], loc='upper left')
+    
+   
 """
 fonction principale
 import, split des données (que test set et train_set pour l'instant'), 
@@ -53,15 +70,15 @@ if __name__ == "__main__":
             # convolution
             kr.layers.Conv2D(16, (3, 3)),
             # pooling
-            kr.layers.MaxPooling2D(pool_size=(2, 3)),
+            kr.layers.MaxPooling2D(pool_size=(3, 3)),
             # convolution
             kr.layers.Conv2D(16, (3, 3)),
             # pooling
-            kr.layers.MaxPooling2D(pool_size=(2, 3)),
+            kr.layers.MaxPooling2D(pool_size=(3, 3)),
             # convolution
             kr.layers.Conv2D(16, (3, 3)),
             # pooling
-            kr.layers.MaxPooling2D(pool_size=(1, 2)),
+            kr.layers.MaxPooling2D(pool_size=(3, 3)),
             #applatir
             kr.layers.Flatten(),
             # couches intermédiaires
@@ -81,7 +98,7 @@ if __name__ == "__main__":
         # entrainement
         # si on veut ajouter une cross-validation, splitter à nouveau et remplir le champ validation_data
         # source https://keras.io/api/models/model_training_apis/
-        network.fit(X_train, Y_train, batch_size=batch_size, epochs=nb_epoch)
+        hist = network.fit(X_train, Y_train, batch_size=batch_size, epochs=nb_epoch)
 
     elif used_package == "MLPClassifier":
         # avec scikit
