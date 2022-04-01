@@ -140,10 +140,9 @@ def threshold(composer, duration, nb):
         for i in range(t):
             dico[composer[i]]=duration[i]
         sortedDict = np.array(sorted(dico.items(), key=lambda x: x[1]))
-        #print(sortedDict)
         m = t-nb
+        # Donne la durée pour avoir le nombre compositeur désiré
         thresh = sortedDict[m-1,1]
-        #print(thresh)
         return float(thresh)
 
 
@@ -164,15 +163,20 @@ def list_compo(path, thresh):
         Liste des compositeurs
 
     '''
+    # Ouverture du fichier csv
     currentFile = open(path, encoding="utf8")
     File = pnd.read_csv(currentFile)
+    # Tableau des compositeurs du fichier
     composer = pnd.unique(File['canonical_composer'])
+    # Déclaration du nouveau tableau
     composer_f = []
     for c in composer:
         count =0
         for index, current in File.iterrows():
             if current['canonical_composer']==c:
+                # Donne la durée totale des morceaux pour chaque compositeur
                 count = count + current['duration']
+        # Ajoute uniquement les compositeurs dont la durée est supérieure ou égale au seuil désiré
         if count >= thresh:
             composer_f.append(c)
     return composer_f
@@ -195,14 +199,36 @@ def new_dataset(path, thresh):
         Tableau pandas contenant les morceaux, leur compositeur et leur durée
 
     '''
+    # Récupère le fichier csv et on le met dans un tableau pandas
     currentFile = open(path, encoding="utf8")
     File = pnd.read_csv(currentFile)
+    # Déclaration du nouveau tableau
     tab = []
+    # Récupère les compositeurs à ajouter dans notre tableau
     composer = list_compo(path, thresh)
+    # Récupère la durée minimale pour un compositeur
+    duration = duree(composer)
+    mind = min(duration)
+    # Déclaration du tableau de compte
+    count = {}
+    for i in range(len(composer)):
+        count[composer[i]]=0
+    
+    # Remplissage du tableau
     for index, current in File.iterrows():
+        
+        # On vérifie que le morceau ne possède qu'un seul compositeur
         if '/' not in current['canonical_composer']:
+           
+            # On vérifie qu'il est dans notre liste de compositeur à ajouter
             if current['canonical_composer'] in composer:
-                tab.append((current['audio_filename'],current['canonical_composer'],current['duration']))
+                
+                # On ajoute uniquement les morceaux tant qu'on ne dépasse pas le seuil minimal
+                if count[current['canonical_composer']] < mind:
+                    tab.append((current['audio_filename'],current['canonical_composer'],current['duration']))
+                    count[current['canonical_composer']] = count[current['canonical_composer']] + current['duration']
+    
+    # On met le nouveau tableau dans un tableau pandas
     new_tab = pnd.DataFrame(data = tab, columns=('audio_filename','canonical_composer','duration'))
     return new_tab
 
@@ -235,7 +261,6 @@ def resampling(audio_filename,curent_duree, cut=30.0):
     i=0.0
     while i+cut < count :
         t, s = lb.load(audio_filename,sr = sr, offset=i,duration=cut)
-        # Regarder composition de t, tableau 1D suffisant normalement
         np.append(X,t)
         i = i+cut
     return X
@@ -332,15 +357,14 @@ def pipeline(nb,json_name):
     dictio["labels"] = []
     dictio["mfcc"] = []
     
-    # Définir json_name
     nb_morceaux = datas.size
     for index, current in datas.iterrows():
         
         start_timer = timeit.default_timer()
         # Resampling
         x1 = resampling(path_datas+current['audio_filename'], current['duration'], cut=10.0)
-        # Définition du nouveau tableau de labels, associe pour chaque bout découper son compositeur
         
+        # Définition du nouveau tableau de labels, associe pour chaque bout découpé son compositeur via son indice dans le dictionnaire
         morceau = np.ones(np.size(x1,axis=0))*compos.index(current['canonical_composer'])
         
         # on ajoute les nouveaux indices au dictionnaire
