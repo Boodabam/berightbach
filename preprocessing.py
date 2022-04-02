@@ -1,8 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import librosa as lb
+#import librosa as lb
 import os, json
+from json import JSONEncoder
 
 import pandas as pnd
 from sklearn.utils import shuffle
@@ -11,15 +12,28 @@ import seaborn as sn
 import math as mt
 import timeit
 
+# Préparation pour l'écriture des ndarray dans le fichier json
+class NumpyArrayEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return JSONEncoder.default(self, obj)
+
 
 ''' Déclaration des variables globales '''
 
 sr = 22050
 path = os.path.dirname(os.path.realpath(__file__))
+
 path_datas = path +"\\maestro-v3.0.0\\"
 path_csv = path + "\\maestro-v3.0.0\\maestro-v3.0.0.csv"
 datas_csv = open(path_csv, encoding="utf8")
 maestro = pnd.read_csv(datas_csv)
+
+path_minidata = path+"\\minidataset\\"
+path_minicsv = path_minidata+"minimaestro.csv"
+mini_datas_csv = open(path_minicsv, encoding = "utf8")
+minimaestro = pnd.read_csv(mini_datas_csv)
 
             
 def all_composer(maestro):
@@ -392,6 +406,6 @@ def pipeline(nb,json_name):
         stop_timer = timeit.default_timer()
         print(index,'/', nb_morceaux, "  time:",stop_timer-start_timer)
  
-    # Ecriture du dictionnaire dans le fichier json
-    with open(path+json_name, "w") as js:
-        json.dump(dictio, js, indent=2)
+    # Ecriture du dictionnaire dans le fichier json    
+    with open(path+json_name, "w",encoding="utf8") as jsf:
+        json.dump(dictio, jsf, cls=NumpyArrayEncoder, indent=2)
