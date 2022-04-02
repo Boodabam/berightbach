@@ -26,9 +26,9 @@ Evidemment à changer si l'oscarito devient un hyperparamètre à optimiser
 
 def load_data(path=path):
     data = json.load(open(path, "r"))
-    X = np.array(data["mfcc"])
-    Y = np.array(data["labels"])
-    nb_classes = len(data['mapping'])
+    X = np.asarray(data["mfcc"])
+    Y = np.asarray(data["labels"])
+    nb_classes = len(np.asarray(data['mapping']))
     return X, Y, nb_classes
 
 def plot_acuracy(network):
