@@ -22,7 +22,7 @@ datas_csv = open(path_csv, encoding="utf8")
 maestro = pnd.read_csv(datas_csv)
 
             
-def composer(maestro):
+def all_composer(maestro):
     '''
     Renvoie un tableau avec tous les compositeurs du fichier csv
     
@@ -33,33 +33,35 @@ def composer(maestro):
     
     Returns
     -------
-    composer_b : numpy array[string]
+    call_compo : numpy array[string]
         tableau contenant tous les compositeurs du dataset
     '''
-    composer_b = pnd.unique(maestro['canonical_composer'])
-    return composer_b
+    all_compo = pnd.unique(maestro['canonical_composer'])
+    return all_compo
 
 
-def tri_composer(composer_b):
+def tri_composer(compo):
     '''
     Tri les compositeurs entre les morceaux ayant un unique compositeur et les morceaux contenant deux compositeurs
     
     Parameters
     ----------
-    composer_b : numpy array[string]
+    compo : numpy array[string]
         Liste des compositeurs à trier
     
     Returns
     -------
-    composer : numpy array[string]
+    composer_s : numpy array[string]
         tableau contenant les compositeurs simples
     composer_d :numpy array[string]
         tableau contenant les compositeurs doubles
         
     '''
-    composer = [x for x in composer_b if '/' not in x]
-    composer_d = [x for x in composer_b if '/' in x]
-    return composer, composer_d
+    # Compositeur simple
+    composer_s = [x for x in compo if '/' not in x]
+    # Compositeur double
+    composer_d = [x for x in compo if '/' in x]
+    return composer_s, composer_d
 
 
 def duree(composer):
@@ -142,11 +144,11 @@ def threshold(composer, duration, nb):
         sortedDict = np.array(sorted(dico.items(), key=lambda x: x[1]))
         m = t-nb
         # Donne la durée pour avoir le nombre compositeur désiré
-        thresh = sortedDict[m-1,1]
-        return float(thresh)
+        seuil = sortedDict[m-1,1]
+        return float(seuil)
 
 
-def list_compo(path, thresh):
+def list_compo_final(path, seuil):
     '''
     Liste des compositeurs remplissant les critères de sélection
 
@@ -154,7 +156,7 @@ def list_compo(path, thresh):
     ----------
     path : string
         Chemin du fichier csv
-    thresh : float
+    seuil : float
         Seuil limite à partir duquel est sélectionné le compositeur
 
     Returns
@@ -177,12 +179,12 @@ def list_compo(path, thresh):
                 # Donne la durée totale des morceaux pour chaque compositeur
                 count = count + current['duration']
         # Ajoute uniquement les compositeurs dont la durée est supérieure ou égale au seuil désiré
-        if count >= thresh:
+        if count >= seuil:
             composer_f.append(c)
     return composer_f
 
 
-def new_dataset(path, thresh):
+def new_dataset(path, seuil, reduce = False):
     '''
     Création du tableau pandas avec les morceaux des compositeurs correspondant aux critères de sélection
 
@@ -190,8 +192,10 @@ def new_dataset(path, thresh):
     ----------
     path : string
         Chemin du fichier csv
-    thresh : float
+    seuil : float
         Seuil limite à partir duquel est sélectionné le compositeur
+    reduce : boolean
+        Indique si on réduit les morceaux dans le data set. The default is False
 
     Returns
     -------
@@ -205,14 +209,16 @@ def new_dataset(path, thresh):
     # Déclaration du nouveau tableau
     tab = []
     # Récupère les compositeurs à ajouter dans notre tableau
-    composer = list_compo(path, thresh)
-    # Récupère la durée minimale pour un compositeur
-    duration = duree(composer)
-    mind = min(duration)
-    # Déclaration du tableau de compte
-    count = {}
-    for i in range(len(composer)):
-        count[composer[i]]=0
+    composer = list_compo_final(path, seuil)
+    
+    if reduce == True :
+        # Récupère la durée minimale pour un compositeur
+        duration = duree(composer)
+        mind = min(duration)
+        # Déclaration du tableau de compte
+        count = {}
+        for i in range(len(composer)):
+            count[composer[i]]=0
     
     # Remplissage du tableau
     for index, current in File.iterrows():
@@ -222,22 +228,27 @@ def new_dataset(path, thresh):
            
             # On vérifie qu'il est dans notre liste de compositeur à ajouter
             if current['canonical_composer'] in composer:
-                
-                # On ajoute uniquement les morceaux tant qu'on ne dépasse pas le seuil minimal
-                if count[current['canonical_composer']] < mind:
+                if reduce == False :
+                    # On ajoute les morceaux au nouveau tableau
                     tab.append((current['audio_filename'],current['canonical_composer'],current['duration']))
-                    count[current['canonical_composer']] = count[current['canonical_composer']] + current['duration']
+                    
+                if reduce == True : 
+                    # On ajoute uniquement les morceaux tant qu'on ne dépasse pas le seuil minimal
+                    if count[current['canonical_composer']] < mind:
+                        tab.append((current['audio_filename'],current['canonical_composer'],current['duration']))
+                        count[current['canonical_composer']] = count[current['canonical_composer']] + current['duration']
     
     # On met le nouveau tableau dans un tableau pandas
     new_tab = pnd.DataFrame(data = tab, columns=('audio_filename','canonical_composer','duration'))
     return new_tab
+
 
 #tab_f = new_dataset(path+"\\maestro-v3.0.0\\maestro-v3.0.0.csv", 12000)
 #print(pnd.unique(tab_f['canonical_composer']))
 #print(tab_f['duration'].min())
 
 
-def resampling(audio_filename,curent_duree, cut=30.0):
+def resampling(audio_filename,curent_duree, cut=10.0):
     '''
     rééchantillonage d'un morceau et découpe en blocs de même taille
 
@@ -248,7 +259,7 @@ def resampling(audio_filename,curent_duree, cut=30.0):
     curent_duree : float
         durée en seconde du morceau
     cut : float
-        Temps de coupe en seconde. The default is 30.0
+        Temps de coupe en seconde. The default is 10.0
 
     Returns
     -------
@@ -341,19 +352,19 @@ def pipeline(nb,json_name):
 
     '''
     
-    # récupère les compositeurs
-    compo = composer(maestro)
+    # récupère les compositeurs du fichier
+    compo = all_composer(maestro)
     # récupère les compositeurs simples
-    compos, double = tri_composer(compo)
+    compo_s, double = tri_composer(compo)
     # récupère les durées associées
-    duration = duree(compos)
+    duration = duree(compo_s)
     # retourne le seuil 
-    thresh = threshold(compos, duration, nb)
-    datas = new_dataset(path_csv, thresh)
+    seuil = threshold(compo_s, duration, nb)
+    datas = new_dataset(path_csv, seuil)
     
     # Initialisation du dictionnaire à écrire dans le fichier json
     dictio = {}
-    dictio["mapping"] = compos
+    dictio["mapping"] = compo_s
     dictio["labels"] = []
     dictio["mfcc"] = []
     
@@ -365,7 +376,7 @@ def pipeline(nb,json_name):
         x1 = resampling(path_datas+current['audio_filename'], current['duration'], cut=10.0)
         
         # Définition du nouveau tableau de labels, associe pour chaque bout découpé son compositeur via son indice dans le dictionnaire
-        morceau = np.ones(np.size(x1,axis=0))*compos.index(current['canonical_composer'])
+        morceau = np.ones(np.size(x1,axis=0))*compo_s.index(current['canonical_composer'])
         
         # on ajoute les nouveaux indices au dictionnaire
         dictio["labels"] = np.append(dictio["labels"],morceau)
