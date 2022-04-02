@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-#import librosa as lb
+import librosa as lb
 import os, json
 from json import JSONEncoder
 
@@ -316,38 +316,6 @@ def audio_preprocessing(X, nb_mfcc, mfcc_resample=1):
         cepstrum = np.transpose(cepstrum[::mfcc_resample])
     mfcc = scale(cepstrum, axis=1)
     return mfcc
-
-
-def write_json(X, composer, json_name):
-    '''
-    Effectue le mapping de labels et écrit les données dans un json
-
-    Parameters
-    ----------
-    X : numpy array(2D)
-        mfcc resamplées
-    composer : string
-        label
-    json_name : string
-        nom du fichier json
-
-    Returns
-    -------
-    None.
-
-    '''
-    # Récupère les données présentes dans le fichier json
-    with open(path+json_name) as js:
-        data_dict = json.load(js)
-
-    # Définition du nouveau tableau de labels
-    dk = list(data_dict.keys())
-    morceau = np.empty(len(X[0]))
-    for i in range(len(X[0])):
-        morceau[i]=dk.index(composer)
-    # Trouver comment écrire à l'intérieur du fichier json
-    #with open(path+json_name, "w") as js:
-    #    json.dump(dictio, js, indent=2)
 
 
 def pipeline(nb,json_name):
