@@ -165,6 +165,41 @@ def threshold(composer, duration, nb):
         return float(seuil)
 
 
+def list_compo(composer, duration ,nb):
+    '''
+
+    Parameters
+    ----------
+    composer : nd array
+        Tableau contenant les compositeurs du tableau pandas
+    duration : nd array
+        Tableau contenant la durée totale des morceaux associées à un compositeur
+    nb : int
+        Nombre de compositeurs désirés pour les tests
+
+    Returns
+    -------
+    final_compo : nd array
+        Tableau contenant le nombre de compositeurs désiré possédant le plus de données
+
+    '''
+    t = len(composer)
+    if nb>t :
+        print("Erreur dans le choix de la taille, trop de compositeurs demandés")
+    else :
+        dico = {}
+        for i in range(t):
+            dico[composer[i]]=duration[i]
+        sortedDict = np.array(sorted(dico.items(), key=lambda x: x[1]))
+        
+        final_compo = []
+        
+        for i in range(np.size(sortedDict,axis=0)):
+            if i>= np.size(sortedDict,axis=0)-nb:
+                final_compo.append(sortedDict[i][0])
+        return final_compo
+
+
 def list_compo_final(path, seuil):
     '''
     Liste des compositeurs remplissant les critères de sélection
@@ -201,7 +236,7 @@ def list_compo_final(path, seuil):
     return composer_f
 
 
-def new_dataset(path, seuil, reduce = False):
+def new_dataset(path, nb, reduce = False):
     '''
     Création du tableau pandas avec les morceaux des compositeurs correspondant aux critères de sélection
 
@@ -209,10 +244,10 @@ def new_dataset(path, seuil, reduce = False):
     ----------
     path : string
         Chemin du fichier csv
-    seuil : float
-        Seuil limite à partir duquel est sélectionné le compositeur
+    nb : int
+        Nombre de compositeurs souhaités
     reduce : boolean
-        Indique si on réduit les morceaux dans le data set. The default is False
+        Indique si on réduit le nombre de morceaux dans le data set. The default is False
 
     Returns
     -------
@@ -225,8 +260,15 @@ def new_dataset(path, seuil, reduce = False):
     File = pnd.read_csv(currentFile)
     # Déclaration du nouveau tableau
     tab = []
+    
+    # Récupère tout les compositeurs
+    all_compo = all_composer(File)
+    # Fait le tri dans les compositeurs
+    compo_simple, compo_double = tri_composer(all_compo)
+    # Récupère les durées
+    duration = duree(compo_simple)
     # Récupère les compositeurs à ajouter dans notre tableau
-    composer = list_compo_final(path, seuil)
+    composer = list_compo(compo_simple,duration,nb)
     
     if reduce == True :
         # Récupère la durée minimale pour un compositeur
@@ -340,23 +382,15 @@ def pipeline(nb,json_name,path_use=path_datas,data_pnd=maestro, reduce = False):
     None.
 
     '''
-    
-    # récupère les compositeurs du fichier
-    compo = all_composer(data_pnd)
-    # récupère les compositeurs simples
-    compo_s, double = tri_composer(compo)
-    # récupère les durées associées
-    duration = duree(compo_s)
-    # retourne le seuil 
-    seuil = threshold(compo_s, duration, nb)
-    datas = new_dataset(path_minicsv, 0, reduce = reduce)
+    # Création du tableau pandas avec le nombre de compositeurs souhaités
+    datas = new_dataset(path_minicsv, nb, reduce = reduce)
+    # Récupère la liste des compositeurs
+    final_compo = all_composer(datas)
     # Initialisation du dictionnaire à écrire dans le fichier json
     dictio = {}
-    dictio["mapping"] = compo_s
+    dictio["mapping"] = final_compo
     dictio["labels"] = []
     dictio["mfcc"] = []
-    
-    i=0
     
     nb_morceaux = np.size(datas, axis=0)
     for index, current in datas.iterrows():
@@ -364,7 +398,7 @@ def pipeline(nb,json_name,path_use=path_datas,data_pnd=maestro, reduce = False):
         # Resampling
         x1 = resampling(path_use+current['audio_filename'], current['duration'], cut=10.0)
         # Définition du nouveau tableau de labels, associe pour chaque bout découpé son compositeur via son indice dans le dictionnaire
-        morceau = np.ones(np.size(x1,axis=0),dtype=int)*int(compo_s.index(current['canonical_composer']))
+        morceau = np.ones(np.size(x1,axis=0),dtype=int)*int(final_compo.index(current['canonical_composer']))
         # on ajoute les nouveaux indices au dictionnaire
         dictio["labels"] = np.append(dictio["labels"],morceau)
         for i in range(np.size(x1,axis=0)):
