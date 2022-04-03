@@ -398,7 +398,7 @@ def pipeline(nb,json_name,path_use=path_datas,data_pnd=maestro, reduce = False):
         # Resampling
         x1 = resampling(path_use+current['audio_filename'], current['duration'], cut=10.0)
         # Définition du nouveau tableau de labels, associe pour chaque bout découpé son compositeur via son indice dans le dictionnaire
-        morceau = np.ones(np.size(x1,axis=0),dtype=int)*int(final_compo.index(current['canonical_composer']))
+        morceau = np.ones(np.size(x1,axis=0),dtype=int)*int(np.where(final_compo == current['canonical_composer'])[0])
         # on ajoute les nouveaux indices au dictionnaire
         dictio["labels"] = np.append(dictio["labels"],morceau)
         for i in range(np.size(x1,axis=0)):
