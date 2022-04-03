@@ -2,6 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split
+from keras.layers import Input
+from keras.layers import Conv2D
+from keras.layers import MaxPooling2D
+from keras.layers import Dense
+from keras.layers import Flatten
 import tensorflow.keras as kr
 import librosa as lb
 import os, json
@@ -31,19 +36,19 @@ def load_data(path=path):
     nb_classes = len(np.asarray(data['mapping']))
     return X, Y, nb_classes
 
-def plot_acuracy(network):
+def plot_acuracy(hist):
     fig = plt.figure(figsize=(12,12))
     ax = fig.add_subplot(2,1,1)
     ax.plot(hist.history['Accuracy'])
     #ax.plot(hist.history['val_accuracy'])
-    ax.title('model accuracy')
+    ax.set_title('model accuracy')
     ax.ylabel('accuracy')
     ax.xlabel('epoch')
     ax.legend(['train', 'test'], loc='upper left')
     ax = fig.add_subplot(2,1,2)
     ax.plot(hist.history['loss'])
     #ax.plot(hist.history['val_loss'])
-    ax.title('model loss')
+    ax.set_title('model loss')
     ax.ylabel('loss')
     ax.xlabel('epoch')
     ax.legend(['train', 'test'], loc='upper left')
@@ -60,35 +65,33 @@ if __name__ == "__main__":
     X, Y, nb_classes = load_data()
     # splitter le dataset
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=test_size)
-
     # solveur: On utilise SGD (Adam a l'air plus performant mais je sais pas trop comment il marche)
     if used_package == "tensorflow":
         # avec tensorflow
-        network = kr.Sequential([
+        network = kr.Sequential()
             # entrée
-            kr.layers.Input(shape=(X.shape[1], X.shape[2],1)),
+        network.add(Input(shape=(X.shape[1], X.shape[2],1)))
             # convolution
-            kr.layers.Conv2D(16, (3, 3)),
+        network.add(Conv2D(16, (3, 3)))
             # pooling
-            kr.layers.MaxPooling2D(pool_size=(3, 3)),
+        network.add(MaxPooling2D(pool_size=(3, 3)))
             # convolution
-            kr.layers.Conv2D(16, (3, 3)),
+        network.add(Conv2D(16, (3, 3)))
             # pooling
-            kr.layers.MaxPooling2D(pool_size=(3, 3)),
+        network.add(MaxPooling2D(pool_size=(3, 3)))
             # convolution
-            kr.layers.Conv2D(16, (3, 3)),
+        network.add(Conv2D(16, (3, 3)))
             # pooling
-            kr.layers.MaxPooling2D(pool_size=(3, 3)),
+        network.add(MaxPooling2D(pool_size=(3, 3)))
             #applatir
-            kr.layers.Flatten(),
+        network.add(Flatten())
             # couches intermédiaires
-            kr.layers.Dense(topo_network[0], activation='relu'),
-            kr.layers.Dense(topo_network[1], activation='relu'),
-            #kr.layers.Dense(topo_network[2], activation='relu'),
+        network.add(Dense(topo_network[0], activation='relu'))
+        network.add(Dense(topo_network[1], activation='relu'))
+        #network.add(Dense(topo_network[2], activation='relu'))
 
             # Sortie
-            kr.layers.Dense(nb_classes, activation='softmax')
-        ])
+        network.add(Dense(nb_classes, activation='softmax'))
 
         optimizer = kr.optimizers.SGD(learning_rate=learning_rate)
 

@@ -317,7 +317,7 @@ def audio_preprocessing(X, nb_mfcc, mfcc_resample=1):
         mfcc rééchantillonnés
 
     '''
-    cepstrum = lb.feature.mfcc(y=X,n_mfcc=nb_mfcc)[:1]
+    cepstrum = lb.feature.mfcc(y=X,n_mfcc=nb_mfcc)[1:]
     if mfcc_resample != 1:
         cepstrum = np.transpose(cepstrum)
         cepstrum = np.transpose(cepstrum[::mfcc_resample])
