@@ -1,0 +1,10 @@
+canonical_composer,canonical_title,split,year,midi_filename,audio_filename,duration
+Alexander Scriabin,"Waltz, Op. 38",validation,2014,2014/MIDI-UNPROCESSED_14-15_R1_2014_MID--AUDIO_15_R1_2014_wav--4.midi,MIDI-UNPROCESSED_14-15_R1_2014_MID--AUDIO_15_R1_2014_wav--4.wav,319.910203594
+Alexander Scriabin,"Sonata No. 4 in F-sharp Major ,Op.30",validation,2013,2013/ORIG-MIDI_01_7_6_13_Group__MID--AUDIO_03_R1_2013_wav--4.midi,ORIG-MIDI_01_7_6_13_Group__MID--AUDIO_03_R1_2013_wav--4.wav,440.110403906
+Franz Liszt,"""La Campanella""",train,2008,2008/MIDI-Unprocessed_18_R1_2008_01-04_ORIG_MID--AUDIO_18_R1_2008_wav--4.midi,MIDI-Unprocessed_18_R1_2008_01-04_ORIG_MID--AUDIO_18_R1_2008_wav--4.wav,269.971685156
+Johann Sebastian Bach,French Suite No. 5 in G Major,train,2004,2004/MIDI-Unprocessed_SMF_02_R1_2004_01-05_ORIG_MID--AUDIO_02_R1_2004_05_Track05_wav.midi,MIDI-Unprocessed_SMF_02_R1_2004_01-05_ORIG_MID--AUDIO_02_R1_2004_05_Track05_wav.wav,968.256759019
+Frédéric Chopin,"Scherzo No. 4 in E Major, Op. 54",train,2013,2013/ORIG-MIDI_03_7_6_13_Group__MID--AUDIO_09_R1_2013_wav--4.midi,ORIG-MIDI_03_7_6_13_Group__MID--AUDIO_09_R1_2013_wav--4.wav,650.51217
+Joseph Haydn,Son. Hob. XVI:52,train,2006,2006/MIDI-Unprocessed_22_R1_2006_01-04_ORIG_MID--AUDIO_22_R1_2006_01_Track01_wav.midi,MIDI-Unprocessed_22_R1_2006_01-04_ORIG_MID--AUDIO_22_R1_2006_01_Track01_wav.wav,1030.59325359
+Ludwig van Beethoven,"Sonata No. 15 in D Major, Op. 28, I. Allegro",test,2017,2017/MIDI-Unprocessed_044_PIANO044_MID--AUDIO-split_07-06-17_Piano-e_1-04_wav--2.midi,MIDI-Unprocessed_044_PIANO044_MID--AUDIO-split_07-06-17_Piano-e_1-04_wav--2.wav,454.737088017
+Robert Schumann,"Sonata No. 2 in G Minor, Op. 22",validation,2018,2018/MIDI-Unprocessed_Recital4_MID--AUDIO_04_R1_2018_wav--4.midi,MIDI-Unprocessed_Recital4_MID--AUDIO_04_R1_2018_wav--4.wav,976.820604375
+Muzio Clementi,"Sonata in B-flat Major, Op.24, No. 2",train,2009,2009/MIDI-Unprocessed_15_R1_2009_01-02_ORIG_MID--AUDIO_15_R1_2009_15_R1_2009_01_WAV.midi,MIDI-Unprocessed_15_R1_2009_01-02_ORIG_MID--AUDIO_15_R1_2009_15_R1_2009_01_WAV.wav,642.479325469

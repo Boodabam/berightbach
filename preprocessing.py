@@ -11,7 +11,10 @@ from sklearn.preprocessing import scale
 import seaborn as sn
 import math as mt
 import timeit
+import warnings
 
+
+warnings.filterwarnings("ignore")
 # Préparation pour l'écriture des ndarray dans le fichier json
 class NumpyArrayEncoder(JSONEncoder):
     def default(self, obj):
@@ -286,7 +289,11 @@ def resampling(audio_filename,curent_duree, cut=10.0):
     i=0.0
     while i+cut < count :
         t, s = lb.load(audio_filename,sr = sr, offset=i,duration=cut)
-        np.append(X,t)
+        if (len(X)==0):
+                X = [t]
+        else :
+            X = np.append(X,[t], axis=0)
+    
         i = i+cut
     return X
     
@@ -318,11 +325,11 @@ def audio_preprocessing(X, nb_mfcc, mfcc_resample=1):
     return mfcc
 
 
-def pipeline(nb,json_name):
+def pipeline(nb,json_name,path_use=path_datas,data_pnd=maestro, reduce = False):
     '''
 
     Parameters
-    ----------
+    ----------s
     nb : INT
         Nombre de compositeurs désirés
     json_name : string
@@ -335,31 +342,29 @@ def pipeline(nb,json_name):
     '''
     
     # récupère les compositeurs du fichier
-    compo = all_composer(maestro)
+    compo = all_composer(data_pnd)
     # récupère les compositeurs simples
     compo_s, double = tri_composer(compo)
     # récupère les durées associées
     duration = duree(compo_s)
     # retourne le seuil 
     seuil = threshold(compo_s, duration, nb)
-    datas = new_dataset(path_csv, seuil)
-    
+    datas = new_dataset(path_minicsv, 0, reduce = reduce)
     # Initialisation du dictionnaire à écrire dans le fichier json
     dictio = {}
     dictio["mapping"] = compo_s
     dictio["labels"] = []
     dictio["mfcc"] = []
     
-    nb_morceaux = datas.size
+    i=0
+    
+    nb_morceaux = np.size(datas, axis=0)
     for index, current in datas.iterrows():
-        
         start_timer = timeit.default_timer()
         # Resampling
-        x1 = resampling(path_datas+current['audio_filename'], current['duration'], cut=10.0)
-        
+        x1 = resampling(path_use+current['audio_filename'], current['duration'], cut=10.0)
         # Définition du nouveau tableau de labels, associe pour chaque bout découpé son compositeur via son indice dans le dictionnaire
-        morceau = np.ones(np.size(x1,axis=0))*compo_s.index(current['canonical_composer'])
-        
+        morceau = np.ones(np.size(x1,axis=0),dtype=int)*int(compo_s.index(current['canonical_composer']))
         # on ajoute les nouveaux indices au dictionnaire
         dictio["labels"] = np.append(dictio["labels"],morceau)
         for i in range(np.size(x1,axis=0)):
@@ -372,8 +377,9 @@ def pipeline(nb,json_name):
                 dictio["mfcc"] = np.append(dictio["mfcc"],[x2], axis=0)
         
         stop_timer = timeit.default_timer()
-        print(index,'/', nb_morceaux, "  time:",stop_timer-start_timer)
- 
+        print(index +1,'/', nb_morceaux, "  time:",stop_timer-start_timer)
+        i= i+1
+        
     # Ecriture du dictionnaire dans le fichier json    
     with open(path+json_name, "w",encoding="utf8") as jsf:
         json.dump(dictio, jsf, cls=NumpyArrayEncoder, indent=2)
