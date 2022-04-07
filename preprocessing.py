@@ -307,7 +307,7 @@ def new_dataset(path, nb, reduce = False):
 #print(tab_f['duration'].min())
 
 
-def resampling(audio_filename,curent_duree, cut=10.0):
+def resampling(audio_filename,curent_duree, cut=30.0):
     '''
     rééchantillonage d'un morceau et découpe en blocs de même taille
 
@@ -359,15 +359,15 @@ def audio_preprocessing(X, nb_mfcc, mfcc_resample=1):
         mfcc rééchantillonnés
 
     '''
-    cepstrum = lb.feature.mfcc(y=X,n_mfcc=nb_mfcc)[1:]
+    mfcc = lb.feature.mfcc(y=X,n_mfcc=127)[127-nb_mfcc:]
     if mfcc_resample != 1:
-        cepstrum = np.transpose(cepstrum)
-        cepstrum = np.transpose(cepstrum[::mfcc_resample])
-    mfcc = scale(cepstrum, axis=1)
+        mfcc = np.transpose(mfcc)
+        mfcc = np.transpose(mfcc[::mfcc_resample])
+    mfcc = scale(mfcc, axis=1)
     return mfcc
 
 
-def pipeline(nb,json_name,path_use=path_datas,data_pnd=maestro, reduce = False):
+def pipeline(nb,json_name,path_csv=path_csv,path_datas=path_datas, reduce = False,nb_mfcc=107, mfcc_resample=1):
     '''
 
     Parameters
@@ -383,7 +383,7 @@ def pipeline(nb,json_name,path_use=path_datas,data_pnd=maestro, reduce = False):
 
     '''
     # Création du tableau pandas avec le nombre de compositeurs souhaités
-    datas = new_dataset(path_minicsv, nb, reduce = reduce)
+    datas = new_dataset(path_csv, nb, reduce = reduce)
     # Récupère la liste des compositeurs
     final_compo = all_composer(datas)
     # Initialisation du dictionnaire à écrire dans le fichier json
@@ -396,14 +396,14 @@ def pipeline(nb,json_name,path_use=path_datas,data_pnd=maestro, reduce = False):
     for index, current in datas.iterrows():
         start_timer = timeit.default_timer()
         # Resampling
-        x1 = resampling(path_use+current['audio_filename'], current['duration'], cut=10.0)
+        x1 = resampling(path_datas+current['audio_filename'], current['duration'], cut=10.0)
         # Définition du nouveau tableau de labels, associe pour chaque bout découpé son compositeur via son indice dans le dictionnaire
         morceau = np.ones(np.size(x1,axis=0),dtype=int)*int(np.where(final_compo == current['canonical_composer'])[0])
         # on ajoute les nouveaux indices au dictionnaire
         dictio["labels"] = np.append(dictio["labels"],morceau)
         for i in range(np.size(x1,axis=0)):
             # Préprocessing de chaque nouvelle coupe par morceau
-            x2 = audio_preprocessing(x1[i], 127, mfcc_resample=1)
+            x2 = audio_preprocessing(x1[i], nb_mfcc,mfcc_resample=mfcc_resample)
             # Remplissage du dictionnaire
             if (len(dictio["mfcc"])==0):
                 dictio["mfcc"] = [x2]

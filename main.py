@@ -10,6 +10,10 @@ from keras.layers import Flatten
 import tensorflow.keras as kr
 import librosa as lb
 import os, json
+import warnings
+
+
+warnings.filterwarnings("ignore")
 
 path = os.getcwd() + "\\preprocessed_data.json"
 test_size = 0.3
