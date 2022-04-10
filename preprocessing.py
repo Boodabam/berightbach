@@ -30,13 +30,9 @@ path = os.path.dirname(os.path.realpath(__file__))
 
 path_datas = path +"\\maestro-v3.0.0\\"
 path_csv = path + "\\maestro-v3.0.0\\maestro-v3.0.0.csv"
-datas_csv = open(path_csv, encoding="utf8")
-maestro = pnd.read_csv(datas_csv)
 
 path_minidata = path+"\\minidataset\\"
 path_minicsv = path_minidata+"minimaestro.csv"
-mini_datas_csv = open(path_minicsv, encoding = "utf8")
-minimaestro = pnd.read_csv(mini_datas_csv)
 
             
 def all_composer(maestro):
@@ -81,7 +77,7 @@ def tri_composer(compo):
     return composer_s, composer_d
 
 
-def duree(composer):
+def duree(composer, datas):
     '''
     Renvoie un tableau contenant la durée totale des morceaux pour chaque compositeur
     donné en paramètre
@@ -90,6 +86,8 @@ def duree(composer):
     ----------
     composer : numpy array[string]
         Tableau contenant le nom des compositeurs
+    datas : tableau pandas
+        Tableau pandas des données
     
     Returns
     -------
@@ -100,7 +98,7 @@ def duree(composer):
     duration=[]
     for c in composer:
         count =0
-        for index, current in maestro.iterrows():
+        for index, current in datas.iterrows():
             if current['canonical_composer']==c:
                 count = count + current['duration']
         duration.append(count)
@@ -132,41 +130,9 @@ def affichage(composer, duration):
     plt.show()
 
 
-def threshold(composer, duration, nb):
-    '''
-    Renvoie le palier pour avoir le nombre de compositeurs nécessaires
-
-    Parameters
-    ----------
-    composer : numpy array[string]
-        Tableau contenant les compositeurs simple
-    duration : numpy array
-        Tableau contenant la durée totale des morceaux par compositeur
-    nb : int
-        Nombre de compositeurs souhaités dans le dataset 
-
-    Returns
-    -------
-    thresh : float
-        Seuil pour avoir le nombre de compositeurs souhaités
-
-    '''
-    t = len(composer)
-    if nb>t :
-        print("Erreur dans le choix de la taille, trop de compositeurs demandés")
-    else :
-        dico = {}
-        for i in range(t):
-            dico[composer[i]]=duration[i]
-        sortedDict = np.array(sorted(dico.items(), key=lambda x: x[1]))
-        m = t-nb
-        # Donne la durée pour avoir le nombre compositeur désiré
-        seuil = sortedDict[m-1,1]
-        return float(seuil)
-
-
 def list_compo(composer, duration ,nb):
     '''
+    Construit la liste des compositeurs avec le nombre désiré
 
     Parameters
     ----------
@@ -200,45 +166,9 @@ def list_compo(composer, duration ,nb):
         return final_compo
 
 
-def list_compo_final(path, seuil):
-    '''
-    Liste des compositeurs remplissant les critères de sélection
-
-    Parameters
-    ----------
-    path : string
-        Chemin du fichier csv
-    seuil : float
-        Seuil limite à partir duquel est sélectionné le compositeur
-
-    Returns
-    -------
-    composer : array
-        Liste des compositeurs
-
-    '''
-    # Ouverture du fichier csv
-    currentFile = open(path, encoding="utf8")
-    File = pnd.read_csv(currentFile)
-    # Tableau des compositeurs du fichier
-    composer = pnd.unique(File['canonical_composer'])
-    # Déclaration du nouveau tableau
-    composer_f = []
-    for c in composer:
-        count =0
-        for index, current in File.iterrows():
-            if current['canonical_composer']==c:
-                # Donne la durée totale des morceaux pour chaque compositeur
-                count = count + current['duration']
-        # Ajoute uniquement les compositeurs dont la durée est supérieure ou égale au seuil désiré
-        if count >= seuil:
-            composer_f.append(c)
-    return composer_f
-
-
 def new_dataset(path, nb, reduce = False):
     '''
-    Création du tableau pandas avec les morceaux des compositeurs correspondant aux critères de sélection
+    Création du tableau pandas avec les morceaux du nombre de compositeur désiré
 
     Parameters
     ----------
@@ -266,14 +196,14 @@ def new_dataset(path, nb, reduce = False):
     # Fait le tri dans les compositeurs
     compo_simple, compo_double = tri_composer(all_compo)
     # Récupère les durées
-    duration = duree(compo_simple)
+    duration = duree(compo_simple, File)
     # Récupère les compositeurs à ajouter dans notre tableau
     composer = list_compo(compo_simple,duration,nb)
     
     if reduce == True :
-        # Récupère la durée minimale pour un compositeur
-        duration = duree(composer)
-        mind = min(duration)
+        # Récupère la durée minimale pour les nouveaux compositeurs
+        new_duration = duree(composer, File)
+        mind = min(new_duration)
         # Déclaration du tableau de compte
         count = {}
         for i in range(len(composer)):
@@ -300,11 +230,6 @@ def new_dataset(path, nb, reduce = False):
     # On met le nouveau tableau dans un tableau pandas
     new_tab = pnd.DataFrame(data = tab, columns=('audio_filename','canonical_composer','duration'))
     return new_tab
-
-
-#tab_f = new_dataset(path+"\\maestro-v3.0.0\\maestro-v3.0.0.csv", 12000)
-#print(pnd.unique(tab_f['canonical_composer']))
-#print(tab_f['duration'].min())
 
 
 def resampling(audio_filename,curent_duree, cut=30.0):
@@ -396,7 +321,7 @@ def pipeline(nb,json_name,path_csv=path_csv,path_datas=path_datas, reduce = Fals
     for index, current in datas.iterrows():
         start_timer = timeit.default_timer()
         # Resampling
-        x1 = resampling(path_datas+current['audio_filename'], current['duration'], cut=10.0)
+        x1 = resampling(path_datas+current['audio_filename'], current['duration'], cut=30.0)
         # Définition du nouveau tableau de labels, associe pour chaque bout découpé son compositeur via son indice dans le dictionnaire
         morceau = np.ones(np.size(x1,axis=0),dtype=int)*int(np.where(final_compo == current['canonical_composer'])[0])
         # on ajoute les nouveaux indices au dictionnaire
@@ -413,7 +338,8 @@ def pipeline(nb,json_name,path_csv=path_csv,path_datas=path_datas, reduce = Fals
         stop_timer = timeit.default_timer()
         print(index +1,'/', nb_morceaux, "  time:",stop_timer-start_timer)
         i= i+1
-        
+    
+    print("preprocessing ended. Start writing")
     # Ecriture du dictionnaire dans le fichier json    
     with open(path+json_name, "w",encoding="utf8") as jsf:
         json.dump(dictio, jsf, cls=NumpyArrayEncoder, indent=2)

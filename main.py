@@ -16,7 +16,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 path = os.getcwd() + "\\preprocessed_data.json"
-test_size = 0.3
+test_size = 0.2
 topo_network = (64, 64, 64)
 used_package = "tensorflow"
 learning_rate = 0.001
@@ -80,7 +80,7 @@ if __name__ == "__main__":
             # convolution
         network.add(Conv2D(16, (3, 3)))
             # pooling
-        network.add(MaxPooling2D(pool_size=(3, 3)))
+        network.add(MaxPooling2D(pool_size=(2, 2)))
             # convolution
         network.add(Conv2D(16, (3, 3)))
             # pooling
@@ -90,7 +90,7 @@ if __name__ == "__main__":
             # couches intermédiaires
         network.add(Dense(topo_network[0], activation='relu'))
         network.add(Dense(topo_network[1], activation='relu'))
-        #network.add(Dense(topo_network[2], activation='relu'))
+        network.add(Dense(topo_network[2], activation='relu'))
 
             # Sortie
         network.add(Dense(nb_classes, activation='softmax'))
@@ -103,7 +103,7 @@ if __name__ == "__main__":
         # entrainement
         # si on veut ajouter une cross-validation, splitter à nouveau et remplir le champ validation_data
         # source https://keras.io/api/models/model_training_apis/
-        hist = network.fit(X_train, Y_train, batch_size=batch_size, epochs=nb_epoch)
+        hist = network.fit(X_train, Y_train, batch_size=batch_size, epochs=nb_epoch, validation_split=0.2)
 
     elif used_package == "MLPClassifier":
         # avec scikit
