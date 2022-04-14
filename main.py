@@ -1,115 +1,150 @@
+import warnings
+warnings.filterwarnings("ignore")
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split
-from keras.layers import Input
-from keras.layers import Conv2D
-from keras.layers import MaxPooling2D
-from keras.layers import Dense
-from keras.layers import Flatten
-import tensorflow.keras as kr
-import librosa as lb
+from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, Dense, Flatten, Dropout, BatchNormalization
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import SGD, Adam
+from seaborn import heatmap
+from pandas import DataFrame
 import os, json
-import warnings
 
-
-warnings.filterwarnings("ignore")
 
 path = os.getcwd() + "\\preprocessed_data.json"
 test_size = 0.2
-topo_network = (64, 64, 64)
-used_package = "tensorflow"
-learning_rate = 0.001
+learning_rate = 0.0005
 batch_size = 32
-nb_epoch = 50
+nb_epoch = 100
 
-"""
-Import des data à partir d'un json
-Format du json:
-    le tableau (3D) des mfcc préprocessées de tout le dataset (je fais le split ici finalement) avec l'étiquette features
-    le tableau (1D) des classes avec l'étiquette labels
-    Le nombre de classes avec l'étiquette nb_classes
-Evidemment à changer si l'oscarito devient un hyperparamètre à optimiser  
-"""
 
 
 def load_data(path=path):
+    """
+    Load les données préprocessées et leurs labels à parti d'un json
+
+    Parameters
+    ----------
+    path : string, optional
+        path du fichier json contenant les données préprocessées. The default is path.
+
+    Returns
+    -------
+    X : numpy ndarray (3D)
+        Données des mfcc.
+    Y : numpy array (1D)
+        classes mappées.
+    nb_classes : int
+        nombre de classes.
+
+    """
+    print("loading data")
     data = json.load(open(path, "r"))
     X = np.asarray(data["mfcc"])
     Y = np.asarray(data["labels"])
+    mapping = np.asarray(data["mapping"])
     nb_classes = len(np.asarray(data['mapping']))
-    return X, Y, nb_classes
+    print("Data loaded")
+    return X, Y, mapping, nb_classes
 
 def plot_acuracy(hist):
+    """
+    trace accuracy et loss pour les ensemble de test et de validation
+
+    Parameters
+    ----------
+    hist : keras hist
+        l'historique d'entrainement keras.
+
+    Returns
+    -------
+    None.
+
+    """
     fig = plt.figure(figsize=(12,12))
     ax = fig.add_subplot(2,1,1)
     ax.plot(hist.history['Accuracy'])
+    ax.plot(hist.history['val_Accuracy'])
     ax.set_title('model accuracy')
     ax.set_ylabel('accuracy')
     ax.set_xlabel('epoch')
-    ax.legend(['train', 'test'], loc='upper left')
+    ax.legend(['train', 'validation'], loc='upper left')
     ax = fig.add_subplot(2,1,2)
     ax.plot(hist.history['loss'])
+    ax.plot(hist.history['val_loss'])
     ax.set_title('model loss')
     ax.set_ylabel('loss')
     ax.set_xlabel('epoch')
-    ax.legend(['train', 'test'], loc='upper left')
-    
-   
-"""
-fonction principale
-import, split des données (que test set et train_set pour l'instant'), 
-j'ai implémenté deux solveurs différents, à voir lequel se débrouille le mieux
-"""
+    ax.legend(['train', 'validation'], loc='upper left')
 
 if __name__ == "__main__":
     # importer les données
-    X, Y, nb_classes = load_data()
+
+    X, Y, mapping, nb_classes = load_data()
+    
     # splitter le dataset
+    
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=test_size)
-    # solveur: On utilise SGD (Adam a l'air plus performant mais je sais pas trop comment il marche)
-    if used_package == "tensorflow":
-        # avec tensorflow
-        network = kr.Sequential()
+    #On utilise SGD
+    network = Sequential()
             # entrée
-        network.add(Input(shape=(X.shape[1], X.shape[2],1)))
+    network.add(Input(shape=(X.shape[1], X.shape[2],1)))
             # convolution
-        network.add(Conv2D(16, (3, 3)))
+    network.add(Conv2D(8, (3, 3)))
+    
+    network.add(BatchNormalization(axis=-1))
             # pooling
-        network.add(MaxPooling2D(pool_size=(3, 3)))
+    network.add(MaxPooling2D(pool_size=(2, 2)))
             # convolution
-        network.add(Conv2D(16, (3, 3)))
+    network.add(Conv2D(16, (3, 3)))
+    
+    network.add(BatchNormalization(axis=-1))
             # pooling
-        network.add(MaxPooling2D(pool_size=(2, 2)))
+    network.add(MaxPooling2D(pool_size=(2, 2)))
             # convolution
-        network.add(Conv2D(16, (3, 3)))
+    network.add(Conv2D(32, (3, 3)))
+    
+    network.add(BatchNormalization(axis=-1))
             # pooling
-        network.add(MaxPooling2D(pool_size=(3, 3)))
+    network.add(MaxPooling2D(pool_size=(1, 2)))
+            # convolution
+    network.add(Conv2D(64, (3, 3)))
+    
+    network.add(BatchNormalization(axis=-1))
+            # pooling
+    network.add(MaxPooling2D(pool_size=(1, 2)))
+             # convolution
+    network.add(Conv2D(128, (3, 3)))
+    
+    network.add(BatchNormalization(axis=-1))
+            # pooling
+    network.add(MaxPooling2D(pool_size=(1, 2)))
             #applatir
-        network.add(Flatten())
+    network.add(Flatten())
+    
+    network.add(Dropout(0.3))
             # couches intermédiaires
-        network.add(Dense(topo_network[0], activation='relu'))
-        network.add(Dense(topo_network[1], activation='relu'))
-        network.add(Dense(topo_network[2], activation='relu'))
+    #network.add(Dense(2500, activation='relu'))
+    #network.add(Dense(2500, activation='relu'))
+    #network.add(Dense(625, activation='relu'))
+    #network.add(Dense(128, activation='relu'))
 
             # Sortie
-        network.add(Dense(nb_classes, activation='softmax'))
+    network.add(Dense(nb_classes, activation='softmax'))
 
-        optimizer = kr.optimizers.SGD(learning_rate=learning_rate)
+    optimizer = Adam(learning_rate=learning_rate)
 
-        network.compile(optimizer=optimizer, loss="MeanSquaredError", metrics=["Accuracy"])
+    network.compile(optimizer=optimizer, loss="MeanSquaredError", metrics=["Accuracy"])
         # un résumé du réseau
-        network.summary()
+    network.summary()
         # entrainement
-        # si on veut ajouter une cross-validation, splitter à nouveau et remplir le champ validation_data
+        # si on veut ajouter une cross-validation, remplir le champ validation_data
         # source https://keras.io/api/models/model_training_apis/
-        hist = network.fit(X_train, Y_train, batch_size=batch_size, epochs=nb_epoch, validation_split=0.2)
+    hist = network.fit(X_train, Y_train, batch_size=batch_size, epochs=nb_epoch, validation_split=0.2)
+    
+    plot_acuracy(hist)
+    
+    results = network.evaluate(X_test, Y_test, batch_size=batch_size)
 
-    elif used_package == "MLPClassifier":
-        # avec scikit
-        # si on veut ajouter une cross-validation, mettre early_stopping sur true et renseigner validation_fraction et n_iter_no_change
-        # source https://scikit-learn.org/stable/modules/generated/sklearn.neural_network.MLPClassifier.html
-        network = MLPClassifier(topo_network, activation='relu', solver='sgd', max_iter=nb_epoch, batch_size=batch_size,
-                                learning_rate='adaptive', learning_rate_init=learning_rate, early_stopping=False)
-        # entrainement
-        network.fit(X_train, Y_train)
+    print("test loss, test acc:", results)

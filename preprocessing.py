@@ -8,6 +8,7 @@ from json import JSONEncoder
 import pandas as pnd
 from sklearn.utils import shuffle
 from sklearn.preprocessing import scale
+from sklearn.preprocessing import normalize
 import seaborn as sn
 import math as mt
 import timeit
@@ -291,6 +292,10 @@ def audio_preprocessing(X, nb_mfcc, mfcc_resample=1):
     mfcc = scale(mfcc, axis=1)
     return mfcc
 
+def audio_preprocessing_var(X):
+    pip_pitch, pip_magnitude = lb.piptrack(y=X, threshold=0.5,fmin=150,fmax=3000)
+    pip_magnitude = 1+normalize(lb.amplitude_to_db(pip_magnitude[3:80],ref=np.max),norm='max')
+    return pip_magnitude
 
 def pipeline(nb,json_name,path_csv=path_csv,path_datas=path_datas, reduce = False,nb_mfcc=107, mfcc_resample=1):
     '''
@@ -328,7 +333,8 @@ def pipeline(nb,json_name,path_csv=path_csv,path_datas=path_datas, reduce = Fals
         dictio["labels"] = np.append(dictio["labels"],morceau)
         for i in range(np.size(x1,axis=0)):
             # Préprocessing de chaque nouvelle coupe par morceau
-            x2 = audio_preprocessing(x1[i], nb_mfcc,mfcc_resample=mfcc_resample)
+            #x2 = audio_preprocessing(x1[i], nb_mfcc,mfcc_resample=mfcc_resample)
+            x2 = audio_preprocessing_var(x1[i])
             # Remplissage du dictionnaire
             if (len(dictio["mfcc"])==0):
                 dictio["mfcc"] = [x2]
@@ -343,3 +349,6 @@ def pipeline(nb,json_name,path_csv=path_csv,path_datas=path_datas, reduce = Fals
     # Ecriture du dictionnaire dans le fichier json    
     with open(path+json_name, "w",encoding="utf8") as jsf:
         json.dump(dictio, jsf, cls=NumpyArrayEncoder, indent=2)
+     
+if __name__ == "__main__":
+    pipeline(6,'\\preprocessed_data.json',reduce=True)
