@@ -139,8 +139,7 @@ if __name__ == "__main__":
         # un résumé du réseau
     network.summary()
         # entrainement
-        # si on veut ajouter une cross-validation, remplir le champ validation_data
-        # source https://keras.io/api/models/model_training_apis/
+    
     hist = network.fit(X_train, Y_train, batch_size=batch_size, epochs=nb_epoch, validation_split=0.2)
     
     plot_acuracy(hist)

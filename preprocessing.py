@@ -9,6 +9,7 @@ import pandas as pnd
 from sklearn.utils import shuffle
 from sklearn.preprocessing import scale
 from sklearn.preprocessing import normalize
+import crepe
 import seaborn as sn
 import math as mt
 import timeit
@@ -297,6 +298,10 @@ def audio_preprocessing_var(X):
     pip_magnitude = 1+normalize(lb.amplitude_to_db(pip_magnitude[3:80],ref=np.max),norm='max')
     return pip_magnitude
 
+def audio_preprocessing_var_2(X):
+    time, frequency, confidence, activation = crepe.predict(X, sr=22050, viterbi=True)
+    return np.transpose(activation)
+
 def pipeline(nb,json_name,path_csv=path_csv,path_datas=path_datas, reduce = False,nb_mfcc=107, mfcc_resample=1):
     '''
 
@@ -326,7 +331,7 @@ def pipeline(nb,json_name,path_csv=path_csv,path_datas=path_datas, reduce = Fals
     for index, current in datas.iterrows():
         start_timer = timeit.default_timer()
         # Resampling
-        x1 = resampling(path_datas+current['audio_filename'], current['duration'], cut=30.0)
+        x1 = resampling(path_datas+current['audio_filename'], current['duration'], cut=10.0)
         # Définition du nouveau tableau de labels, associe pour chaque bout découpé son compositeur via son indice dans le dictionnaire
         morceau = np.ones(np.size(x1,axis=0),dtype=int)*int(np.where(final_compo == current['canonical_composer'])[0])
         # on ajoute les nouveaux indices au dictionnaire
@@ -334,7 +339,7 @@ def pipeline(nb,json_name,path_csv=path_csv,path_datas=path_datas, reduce = Fals
         for i in range(np.size(x1,axis=0)):
             # Préprocessing de chaque nouvelle coupe par morceau
             #x2 = audio_preprocessing(x1[i], nb_mfcc,mfcc_resample=mfcc_resample)
-            x2 = audio_preprocessing_var(x1[i])
+            x2 = audio_preprocessing_var_2(x1[i])
             # Remplissage du dictionnaire
             if (len(dictio["mfcc"])==0):
                 dictio["mfcc"] = [x2]
