@@ -7,6 +7,7 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, Dense, Flatten, Dropout, BatchNormalization
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.optimizers import SGD, Adam
+from tensorflow import reshape
 from seaborn import heatmap
 from pandas import DataFrame
 import os, json
@@ -16,8 +17,7 @@ path = os.getcwd() + "\\preprocessed_data.json"
 test_size = 0.2
 learning_rate = 0.0005
 batch_size = 32
-nb_epoch = 100
-
+nb_epoch = 150
 
 
 def load_data(path=path):
@@ -41,10 +41,13 @@ def load_data(path=path):
     """
     print("loading data")
     data = json.load(open(path, "r"))
-    X = np.asarray(data["mfcc"])
-    Y = np.asarray(data["labels"])
+    X = np.asarray(data["features"])
+    Y_float = np.asarray(data["labels"])
     mapping = np.asarray(data["mapping"])
     nb_classes = len(np.asarray(data['mapping']))
+    Y = np.zeros((len(Y_float),nb_classes))
+    for i, val in enumerate(Y_float):
+        Y[i,int(val)]=1
     print("Data loaded")
     return X, Y, mapping, nb_classes
 
@@ -64,8 +67,8 @@ def plot_acuracy(hist):
     """
     fig = plt.figure(figsize=(12,12))
     ax = fig.add_subplot(2,1,1)
-    ax.plot(hist.history['Accuracy'])
-    ax.plot(hist.history['val_Accuracy'])
+    ax.plot(hist.history['accuracy'])
+    ax.plot(hist.history['val_accuracy'])
     ax.set_title('model accuracy')
     ax.set_ylabel('accuracy')
     ax.set_xlabel('epoch')
@@ -83,13 +86,16 @@ if __name__ == "__main__":
 
     X, Y, mapping, nb_classes = load_data()
     
+    #X = np.reshape(X, (X.shape[0], X.shape[1], X.shape[2],1))
     # splitter le dataset
     
     X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=test_size)
+    
     #On utilise SGD
     network = Sequential()
             # entrée
-    network.add(Input(shape=(X.shape[1], X.shape[2],1)))
+    network.add(Input(shape=(X.shape[1])))
+    """
             # convolution
     network.add(Conv2D(8, (3, 3)))
     
@@ -101,44 +107,48 @@ if __name__ == "__main__":
     
     network.add(BatchNormalization(axis=-1))
             # pooling
-    network.add(MaxPooling2D(pool_size=(2, 2)))
+    network.add(MaxPooling2D(pool_size=(2, 1)))
             # convolution
     network.add(Conv2D(32, (3, 3)))
     
     network.add(BatchNormalization(axis=-1))
             # pooling
-    network.add(MaxPooling2D(pool_size=(1, 2)))
+    network.add(MaxPooling2D(pool_size=(2, 1)))
             # convolution
     network.add(Conv2D(64, (3, 3)))
     
     network.add(BatchNormalization(axis=-1))
             # pooling
-    network.add(MaxPooling2D(pool_size=(1, 2)))
+    network.add(MaxPooling2D(pool_size=(2, 1)))
              # convolution
     network.add(Conv2D(128, (3, 3)))
     
     network.add(BatchNormalization(axis=-1))
             # pooling
-    network.add(MaxPooling2D(pool_size=(1, 2)))
+    network.add(MaxPooling2D(pool_size=(2, 1)))
             #applatir
     network.add(Flatten())
     
     network.add(Dropout(0.3))
+    """
             # couches intermédiaires
-    #network.add(Dense(2500, activation='relu'))
-    #network.add(Dense(2500, activation='relu'))
-    #network.add(Dense(625, activation='relu'))
-    #network.add(Dense(128, activation='relu'))
+    network.add(Dense(128, activation='relu'))
+    network.add(Dense(128, activation='relu'))
+    network.add(Dense(128, activation='relu'))
+    network.add(Dense(128, activation='relu'))
+    network.add(Dense(128, activation='relu'))
 
             # Sortie
     network.add(Dense(nb_classes, activation='softmax'))
 
     optimizer = Adam(learning_rate=learning_rate)
 
-    network.compile(optimizer=optimizer, loss="MeanSquaredError", metrics=["Accuracy"])
+    network.compile(optimizer=optimizer, loss="MeanSquaredError", metrics=["accuracy"])
         # un résumé du réseau
     network.summary()
         # entrainement
+    
+    
     
     hist = network.fit(X_train, Y_train, batch_size=batch_size, epochs=nb_epoch, validation_split=0.2)
     
