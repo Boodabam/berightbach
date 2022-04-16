@@ -46,6 +46,7 @@ def load_data(path=path):
     mapping = np.asarray(data["mapping"])
     nb_classes = len(np.asarray(data['mapping']))
     Y = np.zeros((len(Y_float),nb_classes))
+    #création des vecteurs one-hot
     for i, val in enumerate(Y_float):
         Y[i,int(val)]=1
     print("Data loaded")
@@ -147,13 +148,10 @@ if __name__ == "__main__":
         # un résumé du réseau
     network.summary()
         # entrainement
-    
-    
-    
     hist = network.fit(X_train, Y_train, batch_size=batch_size, epochs=nb_epoch, validation_split=0.2)
-    
+        #tracer accuracy et loss pour train et validation
     plot_acuracy(hist)
-    
+        #print les résultats sur l'ensemble de test
     results = network.evaluate(X_test, Y_test, batch_size=batch_size)
 
     print("test loss, test acc:", results)

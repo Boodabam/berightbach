@@ -7,12 +7,10 @@ import os, json
 from json import JSONEncoder
 
 import pandas as pnd
-from sklearn.utils import shuffle
 from sklearn.preprocessing import scale
 from sklearn.preprocessing import normalize
-#import crepe
+from sklearn.decomposition import PCA
 import seaborn as sn
-import math as mt
 import timeit
 import warnings
 import descriptors
@@ -370,7 +368,8 @@ def pipeline_feat(nb,json_name="\\preprocessed_data.json",path_csv=path_csv,path
 
     Returns
     -------
-    None.
+    dictio: dict
+        le dictionnaire contenant le mapping, les labels et les features
 
     """
     datas = new_dataset(path_csv, nb, reduce = reduce)
@@ -383,11 +382,15 @@ def pipeline_feat(nb,json_name="\\preprocessed_data.json",path_csv=path_csv,path
     dictio["features"] = []
     
     nb_morceaux = np.size(datas, axis=0)
+    #pour tous les morceaux
     for index, current in datas.iterrows():
         start_timer = timeit.default_timer()
+        #créer les midi maps
         notes_roll, file_length, notes_vel, notes_len, notes_bin = preprocessing_midi_roll(path_datas+current['midi_filename'])
+        #si on souhaite découper les morceaux en extraits
         if equalize:
-            cut = 30
+            cut = 30 #temps de découpe en secondes
+            #On découpe toutes les midi map
             notes_roll = cut_pieces(notes_roll,file_length, cut = cut)
             notes_vel = cut_pieces(notes_vel,file_length, cut = cut)
             notes_len = cut_pieces(notes_len,file_length, cut = cut)
@@ -396,21 +399,25 @@ def pipeline_feat(nb,json_name="\\preprocessed_data.json",path_csv=path_csv,path
             # on ajoute les nouveaux indices au dictionnaire
             dictio["labels"] = np.append(dictio["labels"],morceau)
             for i in range(np.size(notes_roll,axis=0)):
+                #pour chaque extrait, on calcule les features et on les ajoute au dictionnaire
                 features = midi_get_features(notes_roll[i], file_length, notes_vel[i], notes_len[i], notes_bin[i])
                 if (len(dictio["features"])==0):
                     dictio["features"] = [features]
                 else :
                     dictio["features"] = np.append(dictio["features"],[features], axis=0)
+        #si on souhaite garder les morceaux entiers
         else:
-            
+            #calcul des features
             features = midi_get_features(notes_roll, file_length, notes_vel, notes_len, notes_bin)
-            
+            # on ajoute les nouveaux indices au dictionnaire
             dictio["labels"] = np.append(dictio["labels"],int(np.where(final_compo == current['canonical_composer'])[0]))
+            #on ajoute les features ajoute au dictionnaire
             if (len(dictio["features"])==0):
                 dictio["features"] = [features]
             else :
                 dictio["features"] = np.append(dictio["features"],[features], axis=0)
-    
+        
+        #print le temps de calcul de chaque morceau
         stop_timer = timeit.default_timer()
         print(index +1,'/', nb_morceaux, "  time:",stop_timer-start_timer)
     
@@ -418,7 +425,8 @@ def pipeline_feat(nb,json_name="\\preprocessed_data.json",path_csv=path_csv,path
     # Ecriture du dictionnaire dans le fichier json    
     with open(path+json_name, "w",encoding="utf8") as jsf:
         json.dump(dictio, jsf, cls=NumpyArrayEncoder, indent=2)
-    
+
+    return dictio
     
     
     
@@ -477,7 +485,57 @@ def pipeline_roll(nb,json_name="\\preprocessed_data.json",path_csv=path_csv,path
     # Ecriture du dictionnaire dans le fichier json    
     with open(path+json_name, "w",encoding="utf8") as jsf:
         json.dump(dictio, jsf, cls=NumpyArrayEncoder, indent=2)
-        
+
+def visualize(dico):
+    """
+    Visualisation: PCA et correlation
+
+    Parameters
+    ----------
+    dico : dict
+        dictionnaire des données préprocessées
+
+    Returns
+    -------
+    None.
+
+    """
+    #PCA
+    colors = ["navy","turquoise","darkorange","green","red","brown"]
+    X = dico["features"]
+    pca = PCA(n_components=2)
+    pca.fit(X)
+    X = pca.transform(X)
+    fig = plt.figure(figsize=(12,12))
+    ax = fig.add_subplot(111)
+    for i, name in enumerate(dico["mapping"]):
+        x_0 = np.array([])
+        x_1 = np.array([])
+        for j, x in enumerate(X):
+            if int(dico["labels"][j])==i: 
+                x_0 = np.append(x_0,x[0])
+                x_1 = np.append(x_1,x[1])
+        ax.scatter(x_0,x_1,c=colors[i],label=name)
+    ax.set_title("Espace des features après PCA")
+    ax.legend()
+    
+    #Correlation Matrix
+    feat = ['length','note_rate_mean','note_rate_std','vel_mean','vel_std','len_mean','len_std','bary_mean_bin','bary_std_bin', 'entr_bin','bary_mean_roll','bary_std_roll','entr_roll','move_bary_std_bin','harm_amp_std_bin','bary_speed_mean_bin','bary_speed_amp_bin','speed_harm_amp_mean_bin','speed_harm_amp_std_bin','entr_var_mean_bin','entr_var_std_bin','move_bary_std_roll','harm_amp_std_roll','bary_speed_mean_roll','bary_speed_amp_roll','speed_harm_amp_mean_roll','speed_harm_amp_std_roll','entr_var_mean_roll','entr_var_std_roll','silence','repetition','autocorr']
+    fig = plt.figure(figsize=(20,20))
+    
+    ax = fig.add_subplot(111)
+    feat_dic = {}
+    X = dico["features"]
+    for i, name in enumerate(feat):
+        feat_dic[name] = []
+        for j, x in enumerate(X):
+            feat_dic[name] = np.append(feat_dic[name],x[i])
+    df = pnd.DataFrame(feat_dic,columns=feat)
+    corrMatrix = df.corr()
+    sn.heatmap(corrMatrix, annot=True)
+     
+    
 if __name__ == "__main__":
-    pipeline_feat(6, equalize=True)
+    d = pipeline_feat(6, equalize=True)
+    visualize(d)
     #pipeline_roll(6,reduce=True)

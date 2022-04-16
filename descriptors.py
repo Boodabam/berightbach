@@ -2,6 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import entropy
 
+"""
+ce fichier contient les différentes valeurs à extraire des midi maps et à exploiter comme features.
+Ces valeurs sont pensées pour être des marqueurs forts de style entre les compositeurs.
+"""
+
 def note_rate(notes_bin):
     """
     Moyenne et écart-type normalisés du nombre de notes par secondes
