@@ -17,7 +17,7 @@ path = os.getcwd() + "\\preprocessed_data.json"
 test_size = 0.2
 learning_rate = 0.0005
 batch_size = 32
-nb_epoch = 150
+nb_epoch = 300
 
 
 def load_data(path=path):

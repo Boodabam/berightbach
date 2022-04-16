@@ -235,6 +235,28 @@ def new_dataset(path, nb, reduce = False):
     return new_tab
 
 def preprocessing_midi_roll(midi_filename):
+    """
+    Transforme un fichier midi en midi maps pour préprocessing
+
+    Parameters
+    ----------
+    midi_filename : string
+        nom du fichier midi
+
+    Returns
+    -------
+    notes_roll : numpy array (2D)
+        midi map
+    file_length : float
+        longueur du morceau en secondes
+    notes_vel : numpy array (2D)
+        midi map des attaques avec information sur la vélocité des notes
+    notes_len : numpy array (2D)
+        midi map des attaques avec information sur la longueur des notes
+    notes_bin : numpy array (2D)
+        midi map des attaques avec information binaire noteOn
+
+    """
     midi_filename_ = midi_filename.replace('/','\\')
     mid = md.MidiFile(midi_filename_)
     file_length = mid.length
@@ -264,6 +286,24 @@ def preprocessing_midi_roll(midi_filename):
     return notes_roll, file_length, notes_vel, notes_len, notes_bin
 
 def cut_pieces(activation, length, cut=30):
+    """
+    Découpe une midi map en morceaux de cut secondes
+
+    Parameters
+    ----------
+    activation : numpy array (2D)
+        midi map
+    length : float
+        longueur du morceau en secondes
+    cut : TYPE, optional
+        longueur des morceaux découpés The default is 30.
+
+    Returns
+    -------
+    activations_array : numpy array (3D)
+        tableau des midi-maps découpées
+
+    """
     n_pieces = int(length//cut)
     activations_array = np.empty((n_pieces,cut*10,activation.shape[1]))
     for i in range(n_pieces):
@@ -271,6 +311,28 @@ def cut_pieces(activation, length, cut=30):
     return activations_array
 
 def midi_get_features(notes_roll, file_length, notes_vel, notes_len, notes_bin):
+    """
+    transforme les midi maps en features. les features sont données dans le fichier descriptors.py
+
+    Parameters
+    ----------
+    notes_roll : numpy array (2D)
+        midi map
+    file_length : float
+        longueur du morceau en secondes
+    notes_vel : numpy array (2D)
+        midi map des attaques avec information sur la vélocité des notes
+    notes_len : numpy array (2D)
+        midi map des attaques avec information sur la longueur des notes
+    notes_bin : numpy array (2D)
+        midi map des attaques avec information binaire noteOn
+
+    Returns
+    -------
+    features : numpy array (1D)
+        tableau des features
+
+    """
     features = np.array([])
     features = np.append(features,file_length/2700)
     features = np.append(features,descriptors.note_rate(notes_bin))
@@ -287,6 +349,30 @@ def midi_get_features(notes_roll, file_length, notes_vel, notes_len, notes_bin):
     return features
 
 def pipeline_feat(nb,json_name="\\preprocessed_data.json",path_csv=path_csv,path_datas=path_datas,reduce = False, equalize=False):
+    """
+    Pipeline de préprocessing midi pour la stratégie de l'utilisation de la méthode des features codées à la main'
+
+    Parameters
+    ----------
+    nb : INT
+        Nombre de compositeurs désirés
+    json_name : string
+        nom du fichier json à écrire The default is "\\preprocessed_data.json".
+    path_csv : string, optional
+        The default is path_csv.
+    path_datas : string, optional
+        The default is path_datas.
+    reduce : bool, optional
+        Inefficace pour l'intant, à implémenter. The default is False.
+    equalize : bool, optional
+        Si True, on découpe des sections sur lesquelles on travaille, si False on travaille sur les morceaux entiers.
+        The default is False.
+
+    Returns
+    -------
+    None.
+
+    """
     datas = new_dataset(path_csv, nb, reduce = reduce)
     # Récupère la liste des compositeurs
     final_compo = all_composer(datas)
@@ -299,15 +385,31 @@ def pipeline_feat(nb,json_name="\\preprocessed_data.json",path_csv=path_csv,path
     nb_morceaux = np.size(datas, axis=0)
     for index, current in datas.iterrows():
         start_timer = timeit.default_timer()
-        
         notes_roll, file_length, notes_vel, notes_len, notes_bin = preprocessing_midi_roll(path_datas+current['midi_filename'])
-        features = midi_get_features(notes_roll, file_length, notes_vel, notes_len, notes_bin)
-        
-        dictio["labels"] = np.append(dictio["labels"],int(np.where(final_compo == current['canonical_composer'])[0]))
-        if (len(dictio["features"])==0):
-            dictio["features"] = [features]
-        else :
-            dictio["features"] = np.append(dictio["features"],[features], axis=0)
+        if equalize:
+            cut = 30
+            notes_roll = cut_pieces(notes_roll,file_length, cut = cut)
+            notes_vel = cut_pieces(notes_vel,file_length, cut = cut)
+            notes_len = cut_pieces(notes_len,file_length, cut = cut)
+            notes_bin = cut_pieces(notes_bin,file_length, cut = cut)
+            morceau = np.ones(np.size(notes_roll,axis=0),dtype=int)*int(np.where(final_compo == current['canonical_composer'])[0])
+            # on ajoute les nouveaux indices au dictionnaire
+            dictio["labels"] = np.append(dictio["labels"],morceau)
+            for i in range(np.size(notes_roll,axis=0)):
+                features = midi_get_features(notes_roll[i], file_length, notes_vel[i], notes_len[i], notes_bin[i])
+                if (len(dictio["features"])==0):
+                    dictio["features"] = [features]
+                else :
+                    dictio["features"] = np.append(dictio["features"],[features], axis=0)
+        else:
+            
+            features = midi_get_features(notes_roll, file_length, notes_vel, notes_len, notes_bin)
+            
+            dictio["labels"] = np.append(dictio["labels"],int(np.where(final_compo == current['canonical_composer'])[0]))
+            if (len(dictio["features"])==0):
+                dictio["features"] = [features]
+            else :
+                dictio["features"] = np.append(dictio["features"],[features], axis=0)
     
         stop_timer = timeit.default_timer()
         print(index +1,'/', nb_morceaux, "  time:",stop_timer-start_timer)
@@ -322,6 +424,26 @@ def pipeline_feat(nb,json_name="\\preprocessed_data.json",path_csv=path_csv,path
     
     
 def pipeline_roll(nb,json_name="\\preprocessed_data.json",path_csv=path_csv,path_datas=path_datas,reduce = False):
+    """
+    Pipeline de préprocessing midi pour la stratégie de la convolution sur les features map'
+
+    Parameters
+    ----------
+    nb : INT
+        Nombre de compositeurs désirés
+    json_name : string
+        nom du fichier json à écrire The default is "\\preprocessed_data.json".
+    path_csv : string, optional
+        The default is path_csv.
+    path_datas : string, optional
+        The default is path_datas.
+    reduce : bool, optional
+        Inefficace pour l'intant, à implémenter. The default is False.
+    Returns
+    -------
+    None.
+
+    """
     # Création du tableau pandas avec le nombre de compositeurs souhaités
     datas = new_dataset(path_csv, nb, reduce = reduce)
     # Récupère la liste des compositeurs
@@ -337,7 +459,7 @@ def pipeline_roll(nb,json_name="\\preprocessed_data.json",path_csv=path_csv,path
         start_timer = timeit.default_timer()
         # Resampling
         matrix, l = preprocessing_midi_roll(path_datas+current['midi_filename'])[:2]
-        x1 = cut_pieces(matrix, l , cut=30)
+        x1 = cut_pieces(matrix, l , cut=60)
         # Définition du nouveau tableau de labels, associe pour chaque bout découpé son compositeur via son indice dans le dictionnaire
         morceau = np.ones(np.size(x1,axis=0),dtype=int)*int(np.where(final_compo == current['canonical_composer'])[0])
         # on ajoute les nouveaux indices au dictionnaire
@@ -357,5 +479,5 @@ def pipeline_roll(nb,json_name="\\preprocessed_data.json",path_csv=path_csv,path
         json.dump(dictio, jsf, cls=NumpyArrayEncoder, indent=2)
         
 if __name__ == "__main__":
-    pipeline_feat(6)
+    pipeline_feat(6, equalize=True)
     #pipeline_roll(6,reduce=True)
