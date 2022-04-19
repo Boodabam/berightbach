@@ -6,6 +6,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.layers import Input, Conv2D, MaxPooling2D, Dense, Flatten, Dropout, BatchNormalization
 from tensorflow.keras.models import Sequential
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 from tensorflow.keras.optimizers import SGD, Adam
 from tensorflow import reshape
 from seaborn import heatmap
@@ -154,4 +155,12 @@ if __name__ == "__main__":
         #print les résultats sur l'ensemble de test
     results = network.evaluate(X_test, Y_test, batch_size=batch_size)
 
+    y_pred=network.predict(X_test) 
+    y_pred=np.argmax(y_pred, axis=1)
+    y_test=np.argmax(Y_test, axis=1)
+    cm = confusion_matrix(y_test, y_pred,normalize='true')
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=mapping)
+    disp.plot()
+    plt.xticks(rotation=90)
+    
     print("test loss, test acc:", results)
